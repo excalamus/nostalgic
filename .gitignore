@@ -1,0 +1,16 @@
+# Patterns
+*~
+\#*\#
+.\#*
+
+# Types
+*.elc
+
+# Directories
+venv/
+scratch/
+build/
+dist/
+output/
+__pycache__/
+*.egg-info/
