@@ -10,7 +10,26 @@ import os
 
 
 class Setting:
-    pass
+
+    def __init__(self, key, default=None, getter=None, setter=None):
+
+        self.key      = key
+        self._default = default
+        self.value    = self._default
+        self.getter   = getter
+        self.setter   = setter
+
+        if not self.getter:
+            self.getter = self._default_getter
+
+        if not setter:
+            self.setter = self._default_setter
+
+    def _default_getter(self):
+        return self.value
+
+    def _default_setter(self, value):
+        self.value = value
 
 
 class SingletonMetaclass(type):
@@ -49,13 +68,15 @@ class Configuration(metaclass=SingletonMetaclass):
         self.__dict__['_proxy']  = {}
         self.__dict__['_values'] = {}
 
-    def _default_getter(self, name):
-        return self.__dict__['_values'][name]
+    def _default_getter(self, key):
+        return self.__dict__['_values'][key]
 
-    def _default_setter(self, name, value):
-        self.__dict__['_values'][name] = value
+    def _default_setter(self, key, value):
+        self.__dict__['_values'][key] = value
 
     def add_setting(self, key, getter=None, setter=None, initial=None):
+
+        setting = Setting(key, getter, setter, initial)
 
         if not getter:
             getter = self._default_getter
@@ -71,17 +92,17 @@ class Configuration(metaclass=SingletonMetaclass):
 
         self._values[key] = initial
 
-    def __getattr__(self, name):
-        if name in self._values:
-            return self._values[name]
+    def __getattr__(self, key):
+        if key in self._values:
+            return self._values[key]
         else:
-            raise AttributeError(f"'{type(self).__name__}' object has no setting '{name}'")
+            raise AttributeError(f"'{type(self).__name__}' object has no setting '{key}'")
 
-    def __setattr__(self, name, value):
-        if name in self._values:
-            self._values[name] = value
+    def __setattr__(self, key, value):
+        if key in self._values:
+            self._values[key] = value
         else:
-            raise AttributeError(f"'{type(self).__name__}' object has no setting '{name}'")
+            raise AttributeError(f"'{type(self).__name__}' object has no setting '{key}'")
 
     def __getitem__(self, key):
         return self._values[key]

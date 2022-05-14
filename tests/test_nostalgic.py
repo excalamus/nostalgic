@@ -15,16 +15,72 @@ def post_test_clean_up():
 class TestSetting:
 
     def test_instance(self):
-        my_setting = nostalgic.Setting()
+        my_setting = nostalgic.Setting('frobnitz')
         assert isinstance(my_setting, object)
+
+    def test_key(self):
+        my_setting = nostalgic.Setting("frobnitz")
+        assert hasattr(my_setting, 'key')
+
+        assert my_setting.key == 'frobnitz'
+
+    def test_value(self):
+        my_setting = nostalgic.Setting('frobnitz')
+        assert hasattr(my_setting, 'value')
+        assert hasattr(my_setting, '_default')
+
+        other_setting = nostalgic.Setting('foo', default=42)
+        assert other_setting.value == 42
+
+    def test_getter(self):
+        my_setting = nostalgic.Setting('frobnitz', default=24)
+        assert hasattr(my_setting, 'getter')
+        assert callable(my_setting.getter)
+
+        self.fake_ui_element = 42
+        def custom_getter():
+            return self.fake_ui_element
+
+        other_setting = nostalgic.Setting('foo', default=100)
+        assert other_setting.value == 100
+        assert other_setting.getter() == 100
+
+        custom_getter_setting = nostalgic.Setting('bar', getter=custom_getter, default=200)
+        assert custom_getter_setting.value == 200
+        assert custom_getter_setting.getter() == 42
+
+    def test_setter(self):
+        my_setting = nostalgic.Setting('frobnitz')
+        assert hasattr(my_setting, 'setter')
+        assert callable(my_setting.setter)
+
+        self.fake_ui_element = 0
+        def custom_setter(value):
+            self.fake_ui_element = value
+
+        other_setting = nostalgic.Setting('foo', default=24)
+        assert other_setting.value == 24
+        other_setting.setter(100)
+        assert other_setting.value == 100
+
+        next_setting = nostalgic.Setting('bar', setter=custom_setter, default=24)
+
+        assert next_setting.value == 24
+        assert self.fake_ui_element == 0
+
+        next_setting.setter(100)
+
+        assert next_setting.value == 24
+        assert self.fake_ui_element == 100
+
 
 
 class TestConfiguration:
 
-    #########
-    # class #
-    #########
-    def test_instance_type(self):
+    ##########
+    # object #
+    ##########
+    def test_instance(self):
         my_configuration = nostalgic.Configuration()
         assert isinstance(my_configuration, object)
 
@@ -195,20 +251,21 @@ class TestConfiguration:
 
 if __name__ == '__main__':
 
-    test_suites = [
-        TestSetting(),
-        TestConfiguration(),
-    ]
+    test_suites = {
+        'setting': TestSetting(),
+        'configuration': TestConfiguration(),
+    }
 
     test_functions = [
         getattr(suite, m)
-        for suite in test_suites
+        for suite in test_suites.values()
         for m in dir(suite)
         if m[:4] == 'test'
     ]
 
     tests_to_run = [
         *test_functions,
+        # test_suites['setting'].test_getter,
     ]
 
     failed = 0
@@ -227,7 +284,7 @@ if __name__ == '__main__':
             if not ONLY_SHOW_FAILS: print(f"  [PASS]", flush=True)
         except Exception as ex:
             failed += 1
-            print(f"  [FAIL]: {ex}", flush=True)
+            print(f"  [FAIL]: {test.__self__.__class__.__name__}.{test.__name__}\n{ex}", flush=True)
             print(f"{traceback.format_exc()}", flush=True)
 
         post_test_clean_up()
