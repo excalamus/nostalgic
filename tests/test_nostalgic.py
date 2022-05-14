@@ -1,5 +1,8 @@
+import os
 import time
+import tempfile
 import traceback
+
 import nostalgic
 
 
@@ -104,6 +107,64 @@ class TestConfiguration:
         my_settings.add_setting('Rama')
         assert len(my_settings) == 2
 
+    def test_getter(self):
+        my_settings = nostalgic.Configuration()
+
+        fake_ui_element = 100
+        def get_from_fake_ui_element():
+            return fake_ui_element
+
+        my_settings.add_setting("my_setting", getter=get_from_fake_ui_element, initial=42)
+        assert hasattr(my_settings, "my_setting")
+
+        assert my_settings._proxy['my_setting']['getter'] == get_from_fake_ui_element
+
+        assert my_settings._proxy['my_setting']['getter']() == 100
+
+        fake_ui_element = 25
+        assert my_settings._proxy['my_setting']['getter']() == 25
+
+    def test_setter(self):
+        my_settings = nostalgic.Configuration()
+
+        self.fake_ui_element = 100
+
+        def set_fake_ui_element(value):
+            self.fake_ui_element = value
+
+        my_settings.add_setting("my_setting", setter=set_fake_ui_element, initial=42)
+        assert hasattr(my_settings, "my_setting")
+
+        assert my_settings._proxy['my_setting']['setter'] == set_fake_ui_element
+
+        assert self.fake_ui_element == 100
+        my_settings._proxy['my_setting']['setter'](25)
+        assert self.fake_ui_element == 25
+
+    def test_default_save_location(self):
+        my_settings = nostalgic.Configuration()
+        assert my_settings._filename == os.path.expanduser('~')
+
+    def test_custom_save_location(self):
+        with tempfile.TemporaryFile() as temp_file:
+            my_settings = nostalgic.Configuration(temp_file)
+
+        assert my_settings._filename == temp_file
+
+    # def test_write(self):
+    #     with tempfile.TemporaryFile() as temp_file:
+    #         my_settings = nostalgic.Configuration(temp_file)
+
+    #         my_settings.add_setting("first", initial=1)
+    #         my_settings.add_setting("second", initial=2)
+    #         my_settings.add_setting("write", initial="wrong")
+    #         my_settings.write_()
+
+    #         with open(temp_file, 'r', encoding='utf-8') as f:
+    #             ini = f.read()
+
+    #     assert ini == "[General]\nfirst=1\nsecond=2\nwrite=wrong"
+
     # TODO implement syncing
 
 
@@ -121,22 +182,30 @@ if __name__ == '__main__':
     failed = 0
     start = time.time()
 
+    ONLY_SHOW_FAILS = True
+
     # NOTE: tests run in alphabetical ordering.  Introspect the code
     # to get the order they're declared in.
     for test in tests_to_run:
+        if not ONLY_SHOW_FAILS: print(f"----------", flush=True)
+
         try:
-            print(f"  Running: {test.__name__}", flush=True)
+            if not ONLY_SHOW_FAILS: print(f"  Running: {test.__name__}", flush=True)
             test()
-            print(f"  [PASS]", flush=True)
+            if not ONLY_SHOW_FAILS: print(f"  [PASS]", flush=True)
         except Exception as ex:
             failed += 1
             print(f"  [FAIL]: {ex}", flush=True)
             print(f"{traceback.format_exc()}", flush=True)
-        print(f"----------", flush=True)
+
         post_test_clean_up()
 
     stop = time.time()
     elapsed = stop-start
+    print(f"----------", flush=True)
+    if ONLY_SHOW_FAILS and failed == 0:
+        print(f"  [PASS]", flush=True)
+
     print(f"Success:{len(tests_to_run)-failed}", flush=True)
     print(f"Fail:\t{failed} ", flush=True)
     print(f"Total:\t{len(tests_to_run)}\tTime: {(elapsed/60):.0f}:{(elapsed%60):.0f}", flush=True)

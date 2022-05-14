@@ -6,6 +6,7 @@
 
 # getter and setter must be callables
 # initial must be a value
+import os
 
 
 class SingletonMetaclass(type):
@@ -36,17 +37,32 @@ class SingletonMetaclass(type):
 
 class Configuration(metaclass=SingletonMetaclass):
 
-    def __init__(self,  *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, filename=os.path.expanduser('~')):
+        super().__init__()
 
         # must define this way since we're overriding __setattr__
+        self.__dict__['_filename'] = filename
         self.__dict__['_proxy']  = {}
         self.__dict__['_values'] = {}
 
+    def _default_getter(self, name):
+        return self.__dict__['_values'][name]
+
+    def _default_setter(self, name, value):
+        self.__dict__['_values'][name] = value
+
     def add_setting(self, key, getter=None, setter=None, initial=None):
 
+        if not getter:
+            getter = self._default_getter
+
+        if not setter:
+            setter = self._default_setter
+
         self._proxy[key] = {
-            'initial' : initial,
+            'getter' : getter,
+            'setter' : setter,
+            'initial': initial,
         }
 
         self._values[key] = initial

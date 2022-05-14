@@ -25,3 +25,6 @@ To test, run
 
 ## Deploy
 - https://packaging.python.org/en/latest/tutorials/packaging-projects/
+
+
+# Notes
