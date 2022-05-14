@@ -9,6 +9,10 @@
 import os
 
 
+class Setting:
+    pass
+
+
 class SingletonMetaclass(type):
 
     _instances = {}
@@ -94,5 +98,3 @@ class Configuration(metaclass=SingletonMetaclass):
 
     def __len__(self):
         return len(self._values)
-
-    # TODO implement remaining "(python) Emulating container types"

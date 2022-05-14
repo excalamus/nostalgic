@@ -12,153 +12,178 @@ def post_test_clean_up():
     nostalgic.Configuration._SingletonMetaclass__reset()
 
 
+class TestSetting:
+
+    def test_instance(self):
+        my_setting = nostalgic.Setting()
+        assert isinstance(my_setting, object)
+
+
 class TestConfiguration:
 
+    #########
+    # class #
+    #########
     def test_instance_type(self):
-        my_settings = nostalgic.Configuration()
-        assert isinstance(my_settings, object)
-
-    def test_add_setting(self):
-        my_settings = nostalgic.Configuration()
-
-        my_settings.add_setting("path", initial="/my/path")
-        assert hasattr(my_settings, "path")
-
-    def test_initial(self):
-        my_settings = nostalgic.Configuration()
-
-        my_settings.add_setting("path", initial="/my/path")
-        assert my_settings.path == "/my/path"
-
-    def test_set_attr(self):
-        my_settings = nostalgic.Configuration()
-
-        try:
-            my_settings.banana = "Rama"
-        except AttributeError:
-            pass
-        else:
-            raise AssertionError("Did not throw an AttributeError!")
-
-        my_settings.add_setting("banana", initial="Rama")
-        assert my_settings.banana == "Rama"
-
-    def test_get_attr(self):
-        my_settings = nostalgic.Configuration()
-
-        try:
-            assert my_settings.banana is not None
-        except AttributeError:
-            pass
-        else:
-            raise AssertionError("Did not throw an AttributeError!")
-
-        my_settings.add_setting("banana", initial="Rama")
-        assert my_settings.banana == "Rama"
+        my_configuration = nostalgic.Configuration()
+        assert isinstance(my_configuration, object)
 
     def test_singleton(self):
-        my_settings = nostalgic.Configuration()
+        my_configuration = nostalgic.Configuration()
         my_other_settings = nostalgic.Configuration()
 
-        assert my_settings == my_other_settings
+        assert my_configuration == my_other_settings
 
-    def test_dict_getter(self):
-        my_settings = nostalgic.Configuration()
+    def test_default_save_location(self):
+        my_configuration = nostalgic.Configuration()
+        assert my_configuration._filename == os.path.expanduser('~')
+
+    def test_custom_save_location(self):
+        with tempfile.TemporaryFile() as temp_file:
+            my_configuration = nostalgic.Configuration(temp_file)
+
+        assert my_configuration._filename == temp_file
+
+    ###########
+    # methods #
+    ###########
+    def test_add_setting(self):
+        my_configuration = nostalgic.Configuration()
+
+        my_configuration.add_setting("path", initial="/my/path")
+        assert hasattr(my_configuration, "path")
+
+    def test_whether_a_setting_exists(self):
+        my_configuration = nostalgic.Configuration()
+
+        my_configuration.add_setting('banana')
+        assert 'banana' in my_configuration
+
+    ###############
+    # data access #
+    ###############
+    def test_attr_get(self):
+        my_configuration = nostalgic.Configuration()
 
         try:
-            my_settings['Rama'] == 'banana'
+            assert my_configuration.banana is not None
+        except AttributeError:
+            pass
+        else:
+            raise AssertionError("Did not throw an AttributeError!")
+
+        my_configuration.add_setting("banana", initial="Rama")
+        assert my_configuration.banana == "Rama"
+
+    def test_attr_set(self):
+        my_configuration = nostalgic.Configuration()
+
+        try:
+            my_configuration.banana = "Rama"
+        except AttributeError:
+            pass
+        else:
+            raise AssertionError("Did not throw an AttributeError!")
+
+        my_configuration.add_setting("banana", initial="Rama")
+        assert my_configuration.banana == "Rama"
+
+    def test_dict_getter(self):
+        my_configuration = nostalgic.Configuration()
+
+        try:
+            my_configuration['Rama'] == 'banana'
         except KeyError:
             pass
         else:
             raise AssertionError("Should throw KeyError")
 
-        my_settings.add_setting("banana", initial="Rama")
-        assert my_settings['banana'] == 'Rama'
+        my_configuration.add_setting("banana", initial="Rama")
+        assert my_configuration['banana'] == 'Rama'
 
     def test_dict_setter(self):
-        my_settings = nostalgic.Configuration()
+        my_configuration = nostalgic.Configuration()
 
         try:
-            my_settings['banana'] = 'fail'
+            my_configuration['banana'] = 'fail'
         except KeyError:
             pass
         else:
             raise AssertionError
 
-        my_settings.add_setting("banana")
-        my_settings['banana'] = "Rama"
+        my_configuration.add_setting("banana")
+        my_configuration['banana'] = "Rama"
 
-        assert my_settings['banana'] == 'Rama'
+        assert my_configuration['banana'] == 'Rama'
 
-    def test_whether_a_setting_exists(self):
-        my_settings = nostalgic.Configuration()
-
-        my_settings.add_setting('banana')
-        assert 'banana' in my_settings
+    #######################
+    # container emulation #
+    #######################
+    # TODO implement remaining "(python) Emulating container types"
 
     def test_number_of_settings(self):
-        my_settings = nostalgic.Configuration()
+        my_configuration = nostalgic.Configuration()
 
-        assert len(my_settings) == 0
+        assert len(my_configuration) == 0
 
-        my_settings.add_setting('banana')
-        assert len(my_settings) == 1
+        my_configuration.add_setting('banana')
+        assert len(my_configuration) == 1
 
-        my_settings.add_setting('Rama')
-        assert len(my_settings) == 2
+        my_configuration.add_setting('Rama')
+        assert len(my_configuration) == 2
+
+    #########
+    # proxy #
+    #########
+    def test_initial(self):
+        my_configuration = nostalgic.Configuration()
+
+        my_configuration.add_setting("path", initial="/my/path")
+        assert my_configuration.path == "/my/path"
 
     def test_getter(self):
-        my_settings = nostalgic.Configuration()
+        my_configuration = nostalgic.Configuration()
 
         fake_ui_element = 100
         def get_from_fake_ui_element():
             return fake_ui_element
 
-        my_settings.add_setting("my_setting", getter=get_from_fake_ui_element, initial=42)
-        assert hasattr(my_settings, "my_setting")
+        my_configuration.add_setting("my_setting", getter=get_from_fake_ui_element, initial=42)
+        assert hasattr(my_configuration, "my_setting")
 
-        assert my_settings._proxy['my_setting']['getter'] == get_from_fake_ui_element
+        assert my_configuration._proxy['my_setting']['getter'] == get_from_fake_ui_element
 
-        assert my_settings._proxy['my_setting']['getter']() == 100
+        assert my_configuration._proxy['my_setting']['getter']() == 100
 
         fake_ui_element = 25
-        assert my_settings._proxy['my_setting']['getter']() == 25
+        assert my_configuration._proxy['my_setting']['getter']() == 25
 
     def test_setter(self):
-        my_settings = nostalgic.Configuration()
+        my_configuration = nostalgic.Configuration()
 
         self.fake_ui_element = 100
 
         def set_fake_ui_element(value):
             self.fake_ui_element = value
 
-        my_settings.add_setting("my_setting", setter=set_fake_ui_element, initial=42)
-        assert hasattr(my_settings, "my_setting")
+        my_configuration.add_setting("my_setting", setter=set_fake_ui_element, initial=42)
+        assert hasattr(my_configuration, "my_setting")
 
-        assert my_settings._proxy['my_setting']['setter'] == set_fake_ui_element
+        assert my_configuration._proxy['my_setting']['setter'] == set_fake_ui_element
 
         assert self.fake_ui_element == 100
-        my_settings._proxy['my_setting']['setter'](25)
+        my_configuration._proxy['my_setting']['setter'](25)
         assert self.fake_ui_element == 25
 
-    def test_default_save_location(self):
-        my_settings = nostalgic.Configuration()
-        assert my_settings._filename == os.path.expanduser('~')
-
-    def test_custom_save_location(self):
-        with tempfile.TemporaryFile() as temp_file:
-            my_settings = nostalgic.Configuration(temp_file)
-
-        assert my_settings._filename == temp_file
 
     # def test_write(self):
     #     with tempfile.TemporaryFile() as temp_file:
-    #         my_settings = nostalgic.Configuration(temp_file)
+    #         my_configuration = nostalgic.Configuration(temp_file)
 
-    #         my_settings.add_setting("first", initial=1)
-    #         my_settings.add_setting("second", initial=2)
-    #         my_settings.add_setting("write", initial="wrong")
-    #         my_settings.write_()
+    #         my_configuration.add_setting("first", initial=1)
+    #         my_configuration.add_setting("second", initial=2)
+    #         my_configuration.add_setting("write", initial="wrong")
+    #         my_configuration.write_()
 
     #         with open(temp_file, 'r', encoding='utf-8') as f:
     #             ini = f.read()
@@ -170,15 +195,22 @@ class TestConfiguration:
 
 if __name__ == '__main__':
 
-    test_suite     = TestConfiguration()
-    test_functions = [getattr(test_suite, m)
-                     for m in dir(test_suite)
-                     if m[:4] == 'test']
+    test_suites = [
+        TestSetting(),
+        TestConfiguration(),
+    ]
+
+    test_functions = [
+        getattr(suite, m)
+        for suite in test_suites
+        for m in dir(suite)
+        if m[:4] == 'test'
+    ]
 
     tests_to_run = [
         *test_functions,
-        # test_suite.test_get_attr
     ]
+
     failed = 0
     start = time.time()
 
