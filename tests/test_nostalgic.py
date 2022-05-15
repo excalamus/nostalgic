@@ -107,13 +107,22 @@ class TestConfiguration:
 
     def test_default_save_location(self):
         my_configuration = nostalgic.Configuration()
-        assert my_configuration.configuration_file == os.path.expanduser('~')
+
+        home = os.path.expanduser('~')
+        assert my_configuration.configuration_file == os.path.join(home, 'test_nostalgic_settings')
 
     def test_custom_save_location(self):
         with tempfile.TemporaryFile() as temp_file:
             my_configuration = nostalgic.Configuration(temp_file)
 
         assert my_configuration.configuration_file == temp_file
+
+    def test_write(self):
+        my_configuration = nostalgic.Configuration()
+
+        assert hasattr(my_configuration, 'write')
+        assert callable(my_configuration.write)
+
 
     ######################
     # Settings interface #
@@ -192,9 +201,10 @@ if __name__ == '__main__':
     ]
 
     tests_to_run = [
-        *test_functions,
+        # *test_functions,
         # test_suites['setting'].test_getter,
-        # test_suites['configuration'].test_setting_value_access
+        # test_suites['configuration'].test_setting_value_access,
+        test_suites['configuration'].test_default_save_location,
     ]
 
     failed = 0

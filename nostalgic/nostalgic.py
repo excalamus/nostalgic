@@ -7,6 +7,7 @@
 # getter and setter must be callables
 # default must be a value
 import os
+import sys
 import warnings
 
 
@@ -73,13 +74,19 @@ class SingletonMetaclass(type):
 
 class Configuration(metaclass=SingletonMetaclass):
 
-    def __init__(self, filename=os.path.expanduser('~')):
+    def __init__(self, filename=None):
         super().__init__()
 
         # must define this way since we're overriding __setattr__
         self.__dict__['_settings'] = {}
 
         # Default Settings
+        if filename is None:
+            home_directory = os.path.expanduser('~')
+            calling_module = os.path.basename(sys.argv[0]).split('.')[0]
+            config_file    = calling_module + "_settings"
+            filename       = os.path.join(home_directory, config_file)
+
         self.add_setting('configuration_file', filename)
 
     def __getitem__(self, key):
@@ -97,3 +104,6 @@ class Configuration(metaclass=SingletonMetaclass):
         if key in Configuration.__dict__ and key[:2] != '__':
             warnings.warn(f"[WARNING]: Setting '{key}' shadows a bound method of the same name!", ShadowWarning)
         self.__dict__['_settings'][key] = setting
+
+    def write(self):
+        pass
