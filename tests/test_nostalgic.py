@@ -1,6 +1,7 @@
 import os
 import time
 import tempfile
+import warnings
 import traceback
 
 import nostalgic
@@ -92,16 +93,6 @@ class TestConfiguration:
 
         assert my_configuration == my_other_settings
 
-    # def test_default_save_location(self):
-    #     my_configuration = nostalgic.Configuration()
-    #     assert my_configuration['filename'] == os.path.expanduser('~')
-
-    # def test_custom_save_location(self):
-    #     with tempfile.TemporaryFile() as temp_file:
-    #         my_configuration = nostalgic.Configuration(temp_file)
-
-    #     assert my_configuration._filename == temp_file
-
     ###########
     # methods #
     ###########
@@ -114,151 +105,76 @@ class TestConfiguration:
         my_configuration.add_setting("foo")
         assert isinstance(my_configuration['foo'], nostalgic.Setting)
 
+    def test_default_save_location(self):
+        my_configuration = nostalgic.Configuration()
+        assert my_configuration.configuration_file == os.path.expanduser('~')
+
+    def test_custom_save_location(self):
+        with tempfile.TemporaryFile() as temp_file:
+            my_configuration = nostalgic.Configuration(temp_file)
+
+        assert my_configuration.configuration_file == temp_file
+
+    ######################
+    # Settings interface #
+    ######################
+    def test_container_access(self):
+        my_configuration = nostalgic.Configuration()
+
         def custom_getter():
             pass
 
         def custom_setter(value):
             pass
 
-        my_configuration.add_setting(
-            "foo", default="bar", getter=custom_getter, setter=custom_setter)
-        assert my_configuration.foo == "bar"
+        my_configuration.add_setting("foo", getter=custom_getter, setter=custom_setter)
         assert my_configuration['foo'].getter == custom_getter
         assert my_configuration['foo'].setter == custom_setter
 
+    def test_setting_value_access(self):
+        my_configuration = nostalgic.Configuration()
+
+        my_configuration.add_setting("foo", default="bar")
+        assert my_configuration.foo == "bar"
+
         my_configuration.foo = 42
+
+        # check that the setting hasn't simply been replaced by an int
         assert isinstance(my_configuration['foo'], nostalgic.Setting)
         assert my_configuration.foo == 42
 
-    # def test_whether_a_setting_exists(self):
-    #     my_configuration = nostalgic.Configuration()
+        # NOTE: How should we handle the edge case where a user
+        # creates a Setting whose key is the same as a Configuration
+        # method?  With the implementation at the time of writing
+        # (using __getattr__ to return Setting values), you might
+        # expect the Setting to clobber the method. It turns out
+        # that's not the case–the method takes precedence.  Is it
+        # worth the time to correct that for the sake of conceptual
+        # purity?  Probably not. Instead, throw a warning to let the
+        # developer know and document the design.  Test to make sure
+        # that this "default behavior" doesn't change from beneath us.
+        #
+        # See: https://tenthousandmeters.com/blog/python-behind-the-scenes-7-how-python-attributes-work/
+        with warnings.catch_warnings() as w:
+            warnings.filterwarnings("error")
+            try:
+                my_configuration.add_setting("add_setting", default="banana")
+            except nostalgic.ShadowWarning:
+                pass
+            else:
+                raise AssertionError("Shadowing a bound method does not raise a warning!")
 
-    #     my_configuration.add_setting('banana')
-    #     assert 'banana' in my_configuration
+        # the context above raised the warning to an error, causing
+        # the setting to not be added. Redo now that the warning is no
+        # longer considered an error
+        my_configuration.add_setting("add_setting", default="banana")
 
-    ######################
-    # Settings interface #
-    ######################
-    # def test_attr_get(self):
-    #     my_configuration = nostalgic.Configuration()
+        # shadowed methods return the method, not the Setting
+        assert my_configuration.add_setting == nostalgic.Configuration().add_setting
 
-    #     try:
-    #         assert my_configuration.banana is not None
-    #     except AttributeError:
-    #         pass
-    #     else:
-    #         raise AssertionError("Did not throw an AttributeError!")
-
-    #     my_configuration.add_setting("banana", default="Rama")
-    #     assert my_configuration.banana == "Rama"
-
-    # def test_get_setting_value(self):
-        # my_configuration = nostalgic.Configuration()
-
-
-
-    # def test_attr_set(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     try:
-    #         my_configuration.banana = "Rama"
-    #     except AttributeError:
-    #         pass
-    #     else:
-    #         raise AssertionError("Did not throw an AttributeError!")
-
-    #     my_configuration.add_setting("banana", default="Rama")
-    #     assert my_configuration.banana == "Rama"
-
-    # def test_dict_getter(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     try:
-    #         my_configuration['Rama'] == 'banana'
-    #     except KeyError:
-    #         pass
-    #     else:
-    #         raise AssertionError("Should throw KeyError")
-
-    #     my_configuration.add_setting("banana", default="Rama")
-    #     assert my_configuration['banana'] == 'Rama'
-
-    # def test_dict_setter(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     try:
-    #         my_configuration['banana'] = 'fail'
-    #     except KeyError:
-    #         pass
-    #     else:
-    #         raise AssertionError
-
-    #     my_configuration.add_setting("banana")
-    #     my_configuration['banana'] = "Rama"
-
-    #     assert my_configuration['banana'] == 'Rama'
-
-
-    #######################
-    # container emulation #
-    #######################
-    # TODO implement remaining "(python) Emulating container types"
-
-    # def test_number_of_settings(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     assert len(my_configuration) == 0
-
-    #     my_configuration.add_setting('banana')
-    #     assert len(my_configuration) == 1
-
-    #     my_configuration.add_setting('Rama')
-    #     assert len(my_configuration) == 2
-
-    #########
-    # proxy #
-    #########
-    # def test_initial(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     my_configuration.add_setting("path", default="/my/path")
-    #     assert my_configuration.path == "/my/path"
-
-    # def test_getter(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     fake_ui_element = 100
-    #     def get_from_fake_ui_element():
-    #         return fake_ui_element
-
-    #     my_configuration.add_setting("my_setting", getter=get_from_fake_ui_element, default=42)
-    #     assert hasattr(my_configuration, "my_setting")
-
-    #     assert my_configuration._proxy['my_setting']['getter'] == get_from_fake_ui_element
-
-    #     assert my_configuration._proxy['my_setting']['getter']() == 100
-
-    #     fake_ui_element = 25
-    #     assert my_configuration._proxy['my_setting']['getter']() == 25
-
-    # def test_setter(self):
-    #     my_configuration = nostalgic.Configuration()
-
-    #     self.fake_ui_element = 100
-
-    #     def set_fake_ui_element(value):
-    #         self.fake_ui_element = value
-
-    #     my_configuration.add_setting("my_setting", setter=set_fake_ui_element, default=42)
-    #     assert hasattr(my_configuration, "my_setting")
-
-    #     assert my_configuration._proxy['my_setting']['setter'] == set_fake_ui_element
-
-    #     assert self.fake_ui_element == 100
-    #     my_configuration._proxy['my_setting']['setter'](25)
-    #     assert self.fake_ui_element == 25
-
-    # TODO implement syncing
+        # if the user wants to shadow a method, they can reach into
+        # the _settings dict
+        assert my_configuration._settings['add_setting'].value == "banana"
 
 
 if __name__ == '__main__':
@@ -278,6 +194,7 @@ if __name__ == '__main__':
     tests_to_run = [
         *test_functions,
         # test_suites['setting'].test_getter,
+        # test_suites['configuration'].test_setting_value_access
     ]
 
     failed = 0

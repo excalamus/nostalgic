@@ -28,3 +28,6 @@ To test, run
 
 
 # Notes
+- Shadowing bound methods with Settings of the same name is possible
+  although doing so will issue a Warning.  Shadowing is not
+  recommended.
