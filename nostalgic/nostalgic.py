@@ -11,7 +11,7 @@ import warnings
 
 
 def show_only_warning_message(msg, *args, **kwargs):
-    # the default warning behavior also shows a line of source code
+    # the default warning behavior shows a superfluous line of code
     # See: https://stackoverflow.com/a/2187390
     return str(msg) + '\n'
 
@@ -82,11 +82,6 @@ class Configuration(metaclass=SingletonMetaclass):
         # Default Settings
         self.add_setting('configuration_file', filename)
 
-    def add_setting(self, key, default=None, getter=None, setter=None):
-        # WARNING: Clobbers extant Setting with same key!
-        setting = Setting(key, default=default, getter=getter, setter=setter)
-        self.__dict__['_settings'][key] = setting
-
     def __getitem__(self, key):
         return self.__dict__['_settings'][key]
 
@@ -94,6 +89,11 @@ class Configuration(metaclass=SingletonMetaclass):
         return self.__dict__['_settings'][name].value
 
     def __getattribute__(self, name):
-        if name in Configuration.__dict__ and name[:2] != '__':
-            warnings.warn(f"[WARNING]: Setting '{name}' shadows a bound method of the same name!", ShadowWarning)
         return object.__getattribute__(self, name)
+
+    def add_setting(self, key, default=None, getter=None, setter=None):
+        # WARNING: Clobbers extant Setting with same key!
+        setting = Setting(key, default=default, getter=getter, setter=setter)
+        if key in Configuration.__dict__ and key[:2] != '__':
+            warnings.warn(f"[WARNING]: Setting '{key}' shadows a bound method of the same name!", ShadowWarning)
+        self.__dict__['_settings'][key] = setting
