@@ -5,30 +5,63 @@ import warnings
 import configparser
 
 
-def show_only_warning_message(msg, *args, **kwargs):
+def _show_only_warning_message(msg, *args, **kwargs):
     # the default warning behavior shows a superfluous line of code
     # See: https://stackoverflow.com/a/2187390
     return str(msg) + '\n'
 
-warnings.formatwarning = show_only_warning_message
+warnings.formatwarning = _show_only_warning_message
 
 
 class ShadowWarning(UserWarning):
+    "Alert user that a Setting key is the same as a Configuration method."
     pass
 
 
 class Setting:
+    """Individual option setting.
 
-    def __init__(self, key, default=None, getter=None, setter=None):
+    A Configuration is a collection of Settings.  A Setting represents
+    some value which the developer wishes to persist beyond the
+    immediate run.  Each Setting is identified by a key.  An optional
+    default value may be set the initial value.  If the Setting
+    corresponds to an object beside the Setting object, such as a UI
+    element, optional setter and getter functions may be set.  These
+    will be called on read and write.
+
+    Parameters
+    ----------
+    key : Any valid dict key, str
+
+      Setting identifier.
+
+    default : object
+
+      Initial value.
+
+    setter : callable
+
+      Function which assigns the current Setting.value.  Must take 1
+      argument, the value to be set.
+
+    getter : callable
+
+      Function which retrieves a value.  Must have no parameters and
+      return a value.
+
+    """
+
+    def __init__(self, key, default=None, setter=None, getter=None):
 
         self.key      = key
         self._default = default
         self.value   = self._default
-        self.getter   = getter
         self.setter   = setter
+        self.getter   = getter
 
 
 class SingletonMetaclass(type):
+    "Force a single Configuration instance."
 
     _instances = {}
 
@@ -55,6 +88,19 @@ class SingletonMetaclass(type):
 
 
 class Configuration(metaclass=SingletonMetaclass):
+    """Collection of Settings.
+
+    A Configuration describes the state of an application which the
+    developer wishes to persist.  It provides a high-level interface
+    to a collection of Setting objects.
+
+    Parameters
+    ----------
+    filename : path-like object
+
+      Location on disk to read and write Settings.
+
+    """
 
     def __init__(self, filename=None):
         super().__init__()
@@ -79,6 +125,8 @@ class Configuration(metaclass=SingletonMetaclass):
 
     def __getattribute__(self, name):
         return object.__getattribute__(self, name)
+
+    # TODO implement "(python) Emulating container types" methods
 
     def add_setting(self, key, default=None, getter=None, setter=None):
         # WARNING: Clobbers extant Setting with same key!
