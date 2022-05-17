@@ -33,18 +33,6 @@ class Setting:
         self.getter   = getter
         self.setter   = setter
 
-        if not self.getter:
-            self.getter = self._default_value_getter
-
-        if not setter:
-            self.setter = self._default_value_setter
-
-    def _default_value_getter(self):
-        return self.value
-
-    def _default_value_setter(self, value):
-        self.value = value
-
 
 class SingletonMetaclass(type):
 

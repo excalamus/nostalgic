@@ -39,7 +39,6 @@ class TestSetting:
     def test_getter(self):
         my_setting = nostalgic.Setting('frobnitz', default=24)
         assert hasattr(my_setting, 'getter')
-        assert callable(my_setting.getter)
 
         self.fake_ui_element = 42
         def custom_getter():
@@ -47,7 +46,12 @@ class TestSetting:
 
         other_setting = nostalgic.Setting('foo', default=100)
         assert other_setting.value == 100
-        assert other_setting.getter() == 100
+        try:
+            other_setting.getter() == 100
+        except TypeError:
+            pass
+        else:
+            raise AssertionError("No getter assigned. Should throw TypeError.")
 
         custom_getter_setting = nostalgic.Setting('bar', getter=custom_getter, default=200)
         assert custom_getter_setting.value == 200
@@ -56,7 +60,6 @@ class TestSetting:
     def test_setter(self):
         my_setting = nostalgic.Setting('frobnitz')
         assert hasattr(my_setting, 'setter')
-        assert callable(my_setting.setter)
 
         self.fake_ui_element = 0
         def custom_setter(value):
@@ -64,8 +67,12 @@ class TestSetting:
 
         other_setting = nostalgic.Setting('foo', default=24)
         assert other_setting.value == 24
-        other_setting.setter(100)
-        assert other_setting.value == 100
+        try:
+            other_setting.setter(100)
+        except TypeError:
+            pass
+        else:
+            raise AssertionError("No setter assigned.  Should throw TypeError.")
 
         next_setting = nostalgic.Setting('bar', setter=custom_setter, default=24)
 
