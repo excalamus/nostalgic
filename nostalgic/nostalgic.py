@@ -1,14 +1,8 @@
-# every setting must be declared
-
-# getter used for syncing the Settings with the user interface
-# setter used to sync the user interface with the Settings
-# default is the default value
-
-# getter and setter must be callables
-# default must be a value
 import os
 import sys
+import json
 import warnings
+import configparser
 
 
 def show_only_warning_message(msg, *args, **kwargs):
@@ -65,17 +59,17 @@ class Configuration(metaclass=SingletonMetaclass):
     def __init__(self, filename=None):
         super().__init__()
 
-        # must define this way since we're overriding __setattr__
-        self.__dict__['_settings'] = {}
-
-        # Default Settings
         if filename is None:
             home_directory = os.path.expanduser('~')
             calling_module = os.path.basename(sys.argv[0]).split('.')[0]
-            config_file    = calling_module + "_settings"
+            config_file    = calling_module + "_config"
             filename       = os.path.join(home_directory, config_file)
 
-        self.add_setting('configuration_file', filename)
+        # must define this way since we're overriding __setattr__
+        self.__dict__['_settings'] = {}  # TODO mangle?
+
+        # Default Settings
+        self.add_setting('config_file', filename)
 
     def __getitem__(self, key):
         return self.__dict__['_settings'][key]
@@ -93,5 +87,40 @@ class Configuration(metaclass=SingletonMetaclass):
             warnings.warn(f"[WARNING]: Setting '{key}' shadows a bound method of the same name!", ShadowWarning)
         self.__dict__['_settings'][key] = setting
 
-    def write(self):
-        pass
+    def read(self, filename=None):
+        if not filename:
+            filename = self.config_file
+
+        with open(filename, 'r', encoding='utf-8') as f:
+            text = f.read()
+
+        parser = configparser.ConfigParser()
+        parser.read_string(text)
+
+        for key, setting in self.__dict__['_settings'].items():
+            if parser.has_option('General', key):
+                raw_value = parser['General'][key]
+                value = json.loads(raw_value)
+                setting.value = value
+                if setting.setter:
+                    setting.setter(value)
+
+    def write(self, filename=None):
+        if not filename:
+            filename = self.config_file
+
+        if not os.path.isdir(os.path.dirname(self.config_file)):
+            os.makedirs(os.path.dirname(self.config_file))
+
+        parser = configparser.ConfigParser()
+        parser.add_section('General')
+
+        for key, setting in self.__dict__['_settings'].items():
+            if key != 'config_file':
+                if setting.getter:
+                    setting.value = setting.getter()
+                value = json.dumps(setting.value)
+                parser.set('General', key, value)
+
+        with open(self.config_file, 'w', encoding='utf-8') as f:
+            parser.write(f)

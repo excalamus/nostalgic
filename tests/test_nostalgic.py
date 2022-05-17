@@ -115,26 +115,116 @@ class TestConfiguration:
     def test_default_save_location(self):
         my_configuration = nostalgic.Configuration()
 
-        home = os.path.expanduser('~')
-        assert my_configuration.configuration_file == os.path.join(home, 'test_nostalgic_settings')
+        home_directory = os.path.expanduser('~')
+        default_save_location = os.path.join(home_directory, 'test_nostalgic_config')
+        assert my_configuration.config_file == default_save_location
 
     def test_custom_save_location(self):
-        with tempfile.TemporaryFile() as temp_file:
+        with tempfile.NamedTemporaryFile() as temp_file:
+            my_configuration = nostalgic.Configuration(temp_file.name)
+
+        assert my_configuration.config_file == temp_file.name
+
+    def test_read(self):
+        # reading sets the Setting's value and also calls the
+        # Setting's setter
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                test_config = "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\nforth = \"four\""
+                f.write(test_config)
+
             my_configuration = nostalgic.Configuration(temp_file)
 
-        assert my_configuration.configuration_file == temp_file
+            assert hasattr(my_configuration, 'read')
+            assert callable(my_configuration.read)
+
+            # only load declared Settings
+            my_configuration.read()
+            assert 'first' not in my_configuration._settings
+            assert 'second' not in my_configuration._settings
+
+            my_configuration.add_setting("first")
+            my_configuration.add_setting("second")
+
+            assert my_configuration.first is None
+            assert my_configuration.second is None
+
+            my_configuration.read()
+
+            assert my_configuration.first == 1
+            assert my_configuration.second == "two"
+
+            # test whether setter gets called
+            assert 'third' not in my_configuration._settings
+
+            self.fake_ui_element = 0
+            def custom_setter(value):
+                self.fake_ui_element = value
+
+            my_configuration.add_setting('third', setter=custom_setter)
+
+            assert my_configuration.third is None
+            assert self.fake_ui_element == 0
+
+            my_configuration.read()
+
+            assert my_configuration.third == 42
+            assert self.fake_ui_element == 42
+
+            assert 'fourth' not in my_configuration._settings
 
     def test_write(self):
-        my_configuration = nostalgic.Configuration()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+            my_configuration = nostalgic.Configuration(temp_file)
+
+        # make sure the test directory/file doesn't already exist
+        assert not os.path.isdir(my_configuration.config_file)
+        assert not os.path.exists(my_configuration.config_file)
 
         assert hasattr(my_configuration, 'write')
         assert callable(my_configuration.write)
 
+        my_configuration.add_setting("first", default=1)
+        my_configuration.add_setting("second", default="two")
+
+        my_configuration.write()
+        assert os.path.exists(my_configuration.config_file)
+
+        with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+            text = f.read()
+
+        # configparser writes putting two new lines at the end of the
+        # file (one for the end line, one for end of file(?)).  I'm
+        # not going to fight with that; just test for it.
+        assert text == "[General]\nfirst = 1\nsecond = \"two\"\n\n"
+
+        def custom_getter():
+            return 42
+
+        my_configuration.add_setting("third", default=0, getter=custom_getter)
+        assert my_configuration.third == 0
+
+        my_configuration.write()
+
+        with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+            text = f.read()
+
+        assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n"
+        assert my_configuration.third == 42
+
+        # Clean up
+        # NOTE: Clean up won't happen on failure
+        os.remove(my_configuration.config_file)
+        os.rmdir(temp_dir)
 
     ######################
     # Settings interface #
     ######################
-    def test_container_access(self):
+    def test_settings_access(self):
         my_configuration = nostalgic.Configuration()
 
         def custom_getter():
@@ -208,11 +298,21 @@ if __name__ == '__main__':
     ]
 
     tests_to_run = [
-        # *test_functions,
+        *test_functions,
+        # test_suites['setting'].test_setter,
         # test_suites['setting'].test_getter,
         # test_suites['configuration'].test_setting_value_access,
-        test_suites['configuration'].test_default_save_location,
+        # test_suites['configuration'].test_custom_save_location,
+        # test_suites['configuration'].test_read,
+        # test_suites['configuration'].test_write,
     ]
+
+    tests_to_skip = [
+        # test_suites['configuration'].test_read,
+        # test_suites['configuration'].test_write,
+    ]
+
+    tests_to_run = [test for test in tests_to_run if test not in tests_to_skip]
 
     failed = 0
     start = time.time()
