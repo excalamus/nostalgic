@@ -111,6 +111,8 @@ class Configuration(metaclass=SingletonMetaclass):
             config_file    = calling_module + "_config"
             filename       = os.path.join(home_directory, config_file)
 
+        filename = os.path.abspath(filename)
+
         # must define this way since we're overriding __setattr__
         self.__dict__['_settings'] = {}  # TODO mangle?
 
@@ -170,5 +172,5 @@ class Configuration(metaclass=SingletonMetaclass):
                 value = json.dumps(setting.value)
                 parser.set('General', key, value)
 
-        with open(self.config_file, 'w', encoding='utf-8') as f:
+        with open(self.config_file, 'w+', encoding='utf-8') as f:
             parser.write(f)

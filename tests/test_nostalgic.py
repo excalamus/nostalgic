@@ -15,10 +15,6 @@ def post_test_clean_up():
 
 class TestSetting:
 
-    def test_instance(self):
-        my_setting = nostalgic.Setting('frobnitz')
-        assert isinstance(my_setting, object)
-
     def test_key(self):
         my_setting = nostalgic.Setting("frobnitz")
         assert hasattr(my_setting, 'key')
@@ -87,13 +83,9 @@ class TestSetting:
 
 class TestConfiguration:
 
-    ##########
-    # object #
-    ##########
-    def test_instance(self):
-        my_configuration = nostalgic.Configuration()
-        assert isinstance(my_configuration, object)
-
+    ########################
+    # Configuration object #
+    ########################
     def test_singleton(self):
         my_configuration = nostalgic.Configuration()
         my_other_settings = nostalgic.Configuration()
@@ -116,19 +108,6 @@ class TestConfiguration:
     ######################
     # Settings interface #
     ######################
-    def test_settings_access(self):
-        my_configuration = nostalgic.Configuration()
-
-        def custom_getter():
-            pass
-
-        def custom_setter(value):
-            pass
-
-        my_configuration.add_setting("foo", getter=custom_getter, setter=custom_setter)
-        assert my_configuration['foo'].getter == custom_getter
-        assert my_configuration['foo'].setter == custom_setter
-
     def test_setting_value_access(self):
         my_configuration = nostalgic.Configuration()
 
@@ -173,6 +152,19 @@ class TestConfiguration:
         # if the user wants to shadow a method, they can reach into
         # the _settings dict
         assert my_configuration._settings['add_setting'].value == "banana"
+
+    def test_settings_object_access(self):
+        my_configuration = nostalgic.Configuration()
+
+        def custom_getter():
+            pass
+
+        def custom_setter(value):
+            pass
+
+        my_configuration.add_setting("foo", getter=custom_getter, setter=custom_setter)
+        assert my_configuration['foo'].getter == custom_getter
+        assert my_configuration['foo'].setter == custom_setter
 
     ###########
     # methods #
@@ -279,8 +271,41 @@ class TestConfiguration:
 
         # Clean up
         # NOTE: Clean up won't happen on failure
+        post_test_clean_up()
         os.remove(my_configuration.config_file)
         os.rmdir(temp_dir)
+
+    # test that if the file doesn't already exist, it will be created
+    non_temp_configuration = nostalgic.Configuration("config_file_right_here")
+
+    # if filename has no directory, then directory creation code
+    # fails.  also, if the user gave the config_file relative to the
+    # current directory, the current directory could change and a
+    # second configuration be written. Prevent these by storing
+    # absolute path.
+    assert non_temp_configuration.config_file == os.path.abspath("config_file_right_here")
+
+    assert not os.path.exists(non_temp_configuration.config_file)
+
+    non_temp_configuration.add_setting("test", default=True)
+
+    warnings.warn(
+        (f"[WARNING]: Writing file to non-temp directory: "
+         f"{os.path.abspath(non_temp_configuration.config_file)}'"))
+    non_temp_configuration.write()
+
+    assert os.path.exists(non_temp_configuration.config_file)
+
+    with open(non_temp_configuration.config_file, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    assert text == "[General]\ntest = true\n\n"
+
+    # Clean up
+    # NOTE: Clean up won't happen on failure
+    os.remove(non_temp_configuration.config_file)
+    if not os.path.exists(non_temp_configuration.config_file):
+        warnings.warn(f"[WARNING]: Removed: '{non_temp_configuration.config_file}'")
 
 
 if __name__ == '__main__':
