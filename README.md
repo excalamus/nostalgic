@@ -1,9 +1,157 @@
+> ***Savor what you feel and what you see / Things that may not seem important now / But may be tomorrow***
+>
+> *–Chuck Schuldiner*
+
 # Nostalgic
 
-Nostalgic is a "drop-in" configuration module to save and restore
-end-user and application settings.
+A drop-in configuration module to save and restore end-user and
+application settings.
 
-# Install
+- No meta-files needed
+- Use only the Python standard library
+- Handle the setting, getting, and syncing of UI elements
+
+# Getting Started
+
+```python
+# basic usage
+import os   # needed only for demonstration
+import sys  # needed only for demonstration
+import nostalgic
+
+
+if __name__ == '__main__':
+    # create configuration in current directory
+    cfg = nostalgic.Configuration("sample_config")
+
+    # declare a setting 'foo' with initial value
+    cfg.add_setting("foo", default="bar")
+
+    print(cfg.foo)  # "bar"
+
+    # change the value
+    cfg.foo = "baz"
+
+    try:
+        # second run
+        cfg.read()
+        print("Config just read")
+        print(cfg.foo)  # "baz"
+        os.remove(cfg.config_file)
+        if not os.path.exists(cfg.config_file):
+            print("Removed config file")
+    except FileNotFoundError:
+        # first run, no config yet
+        cfg.write()
+        print("Wrote config")
+        sys.exit()
+
+```
+
+A Configuration is a collection of Settings.
+
+- Use a dot to get the Setting value (like an attribute)
+- Settings can have a default initial value
+- `write()` Settings to disk and `read()` them back in.
+
+```sh
+$ python3 "/home/ahab/Projects/nostalgic/scratch/sample1.py"
+bar
+Wrote config
+
+$ python3 "/home/ahab/Projects/nostalgic/scratch/sample1.py"
+bar
+Config just read
+baz
+Removed config file
+```
+
+## Coordinate a configuration across your code base
+Optional setter and getter functions handle updating other parts of your code. 
+
+```python
+# demonstrate getting on write() and setting on read()
+import os
+import sys
+import nostalgic
+
+
+class SettingsUI:
+
+    def __init__(self):
+        self.some_ui_thing_the_end_user_uses = 0
+
+
+class Main:
+
+    def __init__(self):
+        self.cfg = nostalgic.Configuration("sample_config")
+        self.settings_ui = SettingsUI()
+
+        self.cfg.add_setting(
+            "ui_related_thing",
+            setter=self.custom_setter,  # called on read()
+            getter=self.custom_getter)  # called on write()
+
+    def custom_setter(self, value):
+        print(f"Setting some_ui_thing_the_end_user_uses")
+        self.settings_ui.some_ui_thing_the_end_user_uses = value
+
+    def custom_getter(self):
+        print(f"Getting some_ui_thing_the_end_user_uses")
+        return self.settings_ui.some_ui_thing_the_end_user_uses
+
+
+if __name__ == '__main__':
+    main = Main()
+
+    print(f"some_ui_thing_the_end_user_uses: "
+          f"{main.settings_ui.some_ui_thing_the_end_user_uses}")  # 0, the initial value
+
+    try:
+        # second run
+        main.cfg.read()
+        print("Config just read")
+        print(f"some_ui_thing_the_end_user_uses: "
+              f"{main.settings_ui.some_ui_thing_the_end_user_uses}")
+        os.remove(main.cfg.config_file)
+        if not os.path.exists(main.cfg.config_file):
+            print("Removed config file")
+    except FileNotFoundError:
+        # first run, no config yet
+
+        # user changed the UI thing
+        main.settings_ui.some_ui_thing_the_end_user_uses = 42
+        main.cfg.write()
+        print("Wrote config")
+        sys.exit()
+
+```
+
+The first run gets the end-user value before writing:
+
+```sh
+$ python3 "/home/ahab/Projects/nostalgic/scratch/sample2.py"
+some_ui_thing_the_end_user_uses: 0
+Getting some_ui_thing_the_end_user_uses
+Wrote config
+```
+
+The second run sets the end-user's previous value:
+
+```sh
+$ python3 "/home/ahab/Projects/nostalgic/scratch/sample2.py"
+some_ui_thing_the_end_user_uses: 0
+Setting some_ui_thing_the_end_user_uses
+Config just read
+some_ui_thing_the_end_user_uses: 42
+Removed config file
+
+```
+
+# Notes
+- Shadowing bound methods with Settings of the same name is possible,
+  although not recommended.
 
 # Development
 
@@ -17,7 +165,7 @@ Install as "editable" using `pip`:
 ```
 
 ## Testing
-To test, run
+Run tests using:
 
 ```sh
 (venv) ~/Projects/nostalgic$ python3 tests/test_nostalgic.py
@@ -25,9 +173,3 @@ To test, run
 
 ## Deploy
 - https://packaging.python.org/en/latest/tutorials/packaging-projects/
-
-
-# Notes
-- Shadowing bound methods with Settings of the same name is possible
-  although doing so will issue a Warning.  Shadowing is not
-  recommended.
