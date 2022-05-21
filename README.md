@@ -9,9 +9,14 @@ application settings.
 
 - No meta-files needed
 - Use only the Python standard library
-- Handle the setting, getting, and syncing of UI elements
+- Handle syncing of UI elements
 
 # Getting Started
+A Configuration is a collection of Settings.
+
+- Use a dot to get the Setting value (like an attribute)
+- Settings can have a default initial value
+- `write()` Settings to disk and `read()` them back in.
 
 ```python
 # basic usage
@@ -48,12 +53,6 @@ if __name__ == '__main__':
 
 ```
 
-A Configuration is a collection of Settings.
-
-- Use a dot to get the Setting value (like an attribute)
-- Settings can have a default initial value
-- `write()` Settings to disk and `read()` them back in.
-
 ```sh
 $ python3 "/home/ahab/Projects/nostalgic/scratch/sample1.py"
 bar
@@ -67,12 +66,12 @@ Removed config file
 ```
 
 ## Coordinate a configuration across your code base
-Optional setter and getter functions handle updating other parts of your code. 
+Optional setter and getter functions handle updating other parts of your code.
 
 ```python
 # demonstrate getting on write() and setting on read()
-import os
-import sys
+import os   # needed only for demonstration
+import sys  # needed only for demonstration
 import nostalgic
 
 
@@ -154,7 +153,6 @@ Removed config file
   although not recommended.
 
 # Development
-
 Install as "editable" using `pip`:
 
 ```sh
@@ -170,6 +168,3 @@ Run tests using:
 ```sh
 (venv) ~/Projects/nostalgic$ python3 tests/test_nostalgic.py
 ```
-
-## Deploy
-- https://packaging.python.org/en/latest/tutorials/packaging-projects/
