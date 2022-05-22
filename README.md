@@ -3,13 +3,17 @@
 > *–Chuck Schuldiner*
 
 # Nostalgic
-
 A drop-in configuration module to save and restore end-user and
 application settings.
 
 - No meta-files needed
 - Use only the Python standard library
 - Handle syncing of UI elements
+
+# Install
+```python
+pip install nostalgic
+```
 
 # Getting Started
 A Configuration is a collection of Settings.
