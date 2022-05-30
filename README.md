@@ -23,12 +23,14 @@ Others provide a non-Pythonic API which hinders comprehension.  For
 example, QSettings looks like
 
 ```python
+# bad
 self.settings.setValue("my_tracked_variable", value)
 ```
 
 and
 
 ```python
+# bad
 self.settings.value("my_tracked_variable", DEFAULT_SETTINGS["my_tracked_variable"])
 ```
 
@@ -38,12 +40,14 @@ touched by Qt.
 With Nostalgic, these calls look simply like
 
 ```python
+# good
 self.settings.my_tracked_value = value
 ```
 
 and
 
 ```python
+# good
 self.settings.my_tracked_value
 ```
 
