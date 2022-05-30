@@ -174,7 +174,7 @@ class Configuration(metaclass=SingletonMetaclass):
             overwrite = True
 
         if key in Configuration.__dict__ and key[:2] != '__':
-            warnings.warn(f"[WARNING]: Setting '{key}' shadows a bound method of the same name!", ShadowWarning)
+            warnings.warn(f"[WARNING]: Setting '{key}' shadows a Configuration method of the same name!", ShadowWarning)
 
         setting = Setting(key, default=default, getter=getter, setter=setter)
 
