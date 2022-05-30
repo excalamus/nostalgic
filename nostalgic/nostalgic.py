@@ -100,6 +100,12 @@ class Configuration(metaclass=SingletonMetaclass):
 
       Location on disk to read and write Settings.
 
+    Properties
+    ----------
+    config_file
+
+      Location of the configuration file.
+
     """
 
     def __init__(self, filename=None):
@@ -130,14 +136,50 @@ class Configuration(metaclass=SingletonMetaclass):
 
     # TODO implement "(python) Emulating container types" methods
 
-    def add_setting(self, key, default=None, getter=None, setter=None):
-        # WARNING: Clobbers extant Setting with same key!
-        setting = Setting(key, default=default, getter=getter, setter=setter)
+    def add_setting(self, key, default=None, setter=None, getter=None):
+        """Add a configuration setting.
+
+        Parameters
+        ----------
+        key : str
+
+          Setting name.  If key already exists, the corresponding
+          setting will be replaced according to the latest call.
+
+        default : object, optional
+
+          Default returned for setting value.  Default is None.
+
+        setter : callable, optional
+
+          Function to apply setting value to an external component on
+          read().  Must take a single argument for the value to be
+          set.
+
+        getter : callable, optional
+
+          Function to get setting value from an external component on
+          write().  Must take zero arguments and return a value
+          (e.g. from the external component) that is serializable.
+
+        """
+
         if key in Configuration.__dict__ and key[:2] != '__':
             warnings.warn(f"[WARNING]: Setting '{key}' shadows a bound method of the same name!", ShadowWarning)
         self.__dict__['_settings'][key] = setting
 
     def read(self, filename=None):
+        """Load settings from disk.
+
+        Parameters
+        ----------
+        filename : path, optional
+
+          Path to configuration file.  Default location is
+          Configuration().config_file.
+
+        """
+
         if not filename:
             filename = self.config_file
 
@@ -156,6 +198,17 @@ class Configuration(metaclass=SingletonMetaclass):
                     setting.setter(value)
 
     def write(self, filename=None):
+        """Save settings to disk.
+
+        Parameters
+        ----------
+        filename : path, optional
+
+          Path to configuration file.  Default location is
+          Configuration().config_file.
+
+        """
+
         if not filename:
             filename = self.config_file
 
