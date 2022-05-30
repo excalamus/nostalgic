@@ -1,1 +1,1 @@
-from .nostalgic import Configuration, Setting, ShadowWarning
+from .nostalgic import Configuration, OverwriteWarning, Setting, ShadowWarning

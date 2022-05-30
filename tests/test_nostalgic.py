@@ -178,6 +178,15 @@ class TestConfiguration:
         my_configuration.add_setting("foo")
         assert isinstance(my_configuration['foo'], nostalgic.Setting)
 
+        with warnings.catch_warnings() as w:
+            warnings.filterwarnings("error")
+            try:
+                my_configuration.add_setting("foo", default="banana")
+            except nostalgic.OverwriteWarning:
+                pass
+            else:
+                raise AssertionError("Overwriting a setting does not raise a warning!")
+
     def test_read(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file = os.path.join(temp_dir, "test")
@@ -330,6 +339,7 @@ if __name__ == '__main__':
         # test_suites['configuration'].test_custom_save_location,
         # test_suites['configuration'].test_read,
         # test_suites['configuration'].test_write,
+        # test_suites['configuration'].test_add_setting,
     ]
 
     tests_to_skip = [

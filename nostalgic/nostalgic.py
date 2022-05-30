@@ -13,6 +13,11 @@ def _show_only_warning_message(msg, *args, **kwargs):
 warnings.formatwarning = _show_only_warning_message
 
 
+class OverwriteWarning(UserWarning):
+    "Alert user that a Setting was overwritten."
+    pass
+
+
 class ShadowWarning(UserWarning):
     "Alert user that a Setting key is the same as a Configuration method."
     pass
@@ -164,9 +169,19 @@ class Configuration(metaclass=SingletonMetaclass):
 
         """
 
+        overwrite = False
+        if key in self.__dict__['_settings']:
+            overwrite = True
+
         if key in Configuration.__dict__ and key[:2] != '__':
             warnings.warn(f"[WARNING]: Setting '{key}' shadows a bound method of the same name!", ShadowWarning)
+
+        setting = Setting(key, default=default, getter=getter, setter=setter)
+
         self.__dict__['_settings'][key] = setting
+
+        if overwrite:
+            warnings.warn(f"[WARNING]: Setting '{key}' was overwritten", OverwriteWarning)
 
     def read(self, filename=None):
         """Load settings from disk.
