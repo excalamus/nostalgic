@@ -6,16 +6,55 @@
 A drop-in configuration module to save and restore end-user and
 application settings.
 
-- No meta-files needed
-- Use only the Python standard library
-- Handle syncing of UI elements
+- No meta-files
+- Built using only the Python standard library
+- Handle syncing with UI elements
 
 # Install
 ```python
 pip install nostalgic
 ```
 
-# Getting Started
+# Motivation
+Many configuration packages themselves require configuration files.
+This often is extraneous.
+
+Others provide a non-Pythonic API which hinders comprehension.  For
+example, QSettings looks like
+
+```python
+self.settings.setValue("my_tracked_variable", value)
+```
+
+and
+
+```python
+self.settings.value("my_tracked_variable", DEFAULT_SETTINGS["my_tracked_variable"])
+```
+
+How you work with a variable depends on whether or not it's been
+touched by Qt.
+
+With Nostalgic, these calls look simply like
+
+```python
+self.settings.my_tracked_value = value
+```
+
+and
+
+```python
+self.settings.my_tracked_value
+```
+
+Furthermore, most applications probably require only a single
+configuration.  Nostalgic uses a Configuration singleton for this
+reason.  Instantiate a Configuration and the next time one is created,
+it will be a reference to the already extant Configuration.  This
+means explicit reference to the Configuration doesn't need to be
+passed around.
+
+# Quick Start
 A Configuration is a collection of Settings.
 
 - Use a dot to get the Setting value (like an attribute)
@@ -69,7 +108,7 @@ baz
 Removed config file
 ```
 
-## Coordinate a configuration across your code base
+## Advanced: coordinate a configuration with the UI
 Optional setter and getter functions handle updating other parts of your code.
 
 ```python
@@ -153,8 +192,8 @@ Removed config file
 ```
 
 # Notes
-- Shadowing bound methods with Settings of the same name is possible,
-  although not recommended.
+- Shadowing Configuration methods with Settings of the same name is
+  possible, although not recommended.  A warning will be given.
 
 # Development
 Install as "editable" using `pip`:
