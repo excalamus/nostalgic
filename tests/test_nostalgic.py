@@ -240,81 +240,84 @@ class TestConfiguration:
             temp_file = os.path.join(temp_dir, "test")
             my_configuration = nostalgic.Configuration(temp_file)
 
-        # make sure the test directory/file doesn't already exist
-        assert not os.path.isdir(my_configuration.config_file)
-        assert not os.path.exists(my_configuration.config_file)
+            # make sure the test directory/file doesn't already exist
+            assert not os.path.isdir(my_configuration.config_file)
+            assert not os.path.exists(my_configuration.config_file)
 
-        assert hasattr(my_configuration, 'write')
-        assert callable(my_configuration.write)
+            assert hasattr(my_configuration, 'write')
+            assert callable(my_configuration.write)
 
-        my_configuration.add_setting("first", default=1)
-        my_configuration.add_setting("second", default="two")
+            my_configuration.add_setting("first", default=1)
+            my_configuration.add_setting("second", default="two")
 
-        my_configuration.write()
-        assert os.path.exists(my_configuration.config_file)
+            my_configuration.write()
+            assert os.path.exists(my_configuration.config_file)
 
-        with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+            with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+            # configparser writes putting two new lines at the end of the
+            # file (one for the end line, one for end of file(?)).  I'm
+            # not going to fight with that; just test for it.
+            #
+            # NOTE: we choose not to write the default settings
+            # (e.g. config_file) to disk
+            assert text == "[General]\nfirst = 1\nsecond = \"two\"\n\n"
+
+            def custom_getter():
+                return 42
+
+            my_configuration.add_setting("third", default=0, getter=custom_getter)
+            assert my_configuration.third == 0
+
+            my_configuration.write()
+
+            with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+            assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n"
+            assert my_configuration.third == 42
+
+            # Clean up
+            # NOTE: Clean up won't happen on failure
+            post_test_clean_up()
+            os.remove(my_configuration.config_file)
+            os.rmdir(temp_dir)
+
+        # test that if the file doesn't already exist, it will be created
+        non_temp_configuration = nostalgic.Configuration("test_config_file_right_here_please_delete")
+
+        # if filename has no directory, then directory creation code
+        # fails.  also, if the user gave the config_file relative to the
+        # current directory, the current directory could change and a
+        # second configuration be written. Prevent these by storing
+        # absolute path.
+        assert non_temp_configuration.config_file == os.path.abspath("test_config_file_right_here_please_delete")
+
+        assert not os.path.exists(non_temp_configuration.config_file), \
+            (f"Config file '{non_temp_configuration.config_file}' exists when it should not. "
+             f"Maybe it's left over from a failed run?  Delete it and try again.")
+
+        non_temp_configuration.add_setting("test", default=True)
+
+        warnings.warn(
+            (f"[WARNING]: Created non-temp file: "
+             f"'{os.path.abspath(non_temp_configuration.config_file)}'"))
+        non_temp_configuration.write()
+
+        assert os.path.exists(non_temp_configuration.config_file)
+
+        with open(non_temp_configuration.config_file, 'r', encoding='utf-8') as f:
             text = f.read()
 
-        # configparser writes putting two new lines at the end of the
-        # file (one for the end line, one for end of file(?)).  I'm
-        # not going to fight with that; just test for it.
-        #
-        # NOTE: we choose not to write the default settings
-        # (e.g. config_file) to disk
-        assert text == "[General]\nfirst = 1\nsecond = \"two\"\n\n"
-
-        def custom_getter():
-            return 42
-
-        my_configuration.add_setting("third", default=0, getter=custom_getter)
-        assert my_configuration.third == 0
-
-        my_configuration.write()
-
-        with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
-            text = f.read()
-
-        assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n"
-        assert my_configuration.third == 42
+        assert text == "[General]\ntest = true\n\n"
 
         # Clean up
         # NOTE: Clean up won't happen on failure
-        post_test_clean_up()
-        os.remove(my_configuration.config_file)
-        os.rmdir(temp_dir)
+        os.remove(non_temp_configuration.config_file)
+        if os.path.exists(non_temp_configuration.config_file):
+            warnings.warn(f"[WARNING]: Failed to remove: '{non_temp_configuration.config_file}'")
 
-    # test that if the file doesn't already exist, it will be created
-    non_temp_configuration = nostalgic.Configuration("config_file_right_here")
-
-    # if filename has no directory, then directory creation code
-    # fails.  also, if the user gave the config_file relative to the
-    # current directory, the current directory could change and a
-    # second configuration be written. Prevent these by storing
-    # absolute path.
-    assert non_temp_configuration.config_file == os.path.abspath("config_file_right_here")
-
-    assert not os.path.exists(non_temp_configuration.config_file)
-
-    non_temp_configuration.add_setting("test", default=True)
-
-    warnings.warn(
-        (f"[WARNING]: Writing file to non-temp directory: "
-         f"{os.path.abspath(non_temp_configuration.config_file)}'"))
-    non_temp_configuration.write()
-
-    assert os.path.exists(non_temp_configuration.config_file)
-
-    with open(non_temp_configuration.config_file, 'r', encoding='utf-8') as f:
-        text = f.read()
-
-    assert text == "[General]\ntest = true\n\n"
-
-    # Clean up
-    # NOTE: Clean up won't happen on failure
-    os.remove(non_temp_configuration.config_file)
-    if not os.path.exists(non_temp_configuration.config_file):
-        warnings.warn(f"[WARNING]: Removed: '{non_temp_configuration.config_file}'")
 
 
 if __name__ == '__main__':
