@@ -242,3 +242,35 @@ class Configuration(metaclass=SingletonMetaclass):
 
         with open(self.config_file, 'w+', encoding='utf-8') as f:
             parser.write(f)
+
+    def get(self, keys=None):
+        """Call settings getters.
+
+        Parameters
+        ----------
+        keys : iterable, optional
+
+          List of setting keys whose getters should be called.
+          Default is None which calls the getter for all settings with
+          getters.
+
+        Returns
+        -------
+
+        Dict keyed by which settings were updated and whose values are
+        the value *before* the update.
+
+        """
+
+        if not keys:
+            keys = self.__dict__['_settings'].keys()
+
+        settings_changed = {}
+        for key in keys:
+            setting = self.__dict__['_settings'][key]
+            if setting.getter:
+                got = setting.getter()
+                settings_changed[key] = setting.value
+                setting.value = got
+
+        return settings_changed
