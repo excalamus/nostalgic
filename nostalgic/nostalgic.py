@@ -186,6 +186,8 @@ class Configuration(metaclass=SingletonMetaclass):
     def read(self, filename=None):
         """Load settings from disk.
 
+        Settings with setters will have them called after read.
+
         Parameters
         ----------
         filename : path, optional
@@ -214,6 +216,8 @@ class Configuration(metaclass=SingletonMetaclass):
 
     def write(self, filename=None):
         """Save settings to disk.
+
+        Settings with getters will have them called before write.
 
         Parameters
         ----------
