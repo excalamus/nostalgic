@@ -2,10 +2,16 @@
 
 activate () {
     if [[ -z "$VIRTUAL_ENV" ]]; then
-        echo "Activating venv..."
-        set -e
-        source venv/bin/activate
-        echo "Activated venv"
+        if [[ -f "venv/bin/activate" ]]; then
+            echo "Activating venv..."
+            source venv/bin/activate
+            echo "Activated venv"
+        else
+            echo "Creating venv..."
+            python3 -m venv venv
+            activate
+            upgrade
+        fi
     fi
 }
 
