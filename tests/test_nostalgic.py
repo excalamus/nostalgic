@@ -402,6 +402,92 @@ class TestConfiguration:
             assert my_configuration.element_1 == 1, my_configuration.element_1
             assert my_configuration.element_2 == 2, my_configuration.element_2
 
+    def test_set(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+            my_configuration = nostalgic.Configuration(temp_file)
+
+            # test that set method exists
+            assert hasattr(my_configuration, 'set')
+            assert callable(my_configuration.set)
+
+            # test that set takes a list of settings and calls their
+            # setter
+            self.element_1 = 1
+
+            def set_element_1(value):
+                self.element_1 = value
+
+            my_configuration.add_setting("element_1", default=0, setter=set_element_1)
+
+            assert self.element_1 == 1, self.element_1
+            assert my_configuration.element_1 == 0, my_configuration.element_1
+
+            my_configuration.set(["element_1"])
+
+            assert self.element_1 == 0, self.element_1
+            assert my_configuration.element_1 == 0, my_configuration.element_1
+
+            # test that settings are called separately
+            self.element_1 = 1
+            self.element_2 = 2
+
+            def set_element_2(value):
+                self.element_2 = value
+
+            assert self.element_1 == 1, self.element_1
+            assert self.element_2 == 2, self.element_2
+
+            my_configuration.add_setting("element_2", default=0, setter=set_element_2)
+
+            # adding settings sets default
+            assert my_configuration.element_1 == 0, my_configuration.element_1
+            assert my_configuration.element_2 == 0, my_configuration.element_2
+
+            # adding a setting doesn't change the UI elements
+            assert self.element_1 == 1, self.element_1
+            assert self.element_2 == 2, self.element_2
+
+            my_configuration.set(["element_2"])
+
+            # calling set on element_2 doesn't affect element_1
+            assert self.element_1 == 1, self.element_1
+            assert self.element_2 == 0, self.element_2
+
+            # test that multiple elements can be passed in
+
+            # reset UI elements
+            self.element_1 = 1
+            self.element_2 = 2
+
+            # confirm that the configuration is still in its default state
+            assert my_configuration.element_1 == 0, my_configuration.element_1
+            assert my_configuration.element_2 == 0, my_configuration.element_2
+
+            my_configuration.set(["element_1", "element_2"])
+
+            # confirm that the elements were set
+            assert self.element_1 == 0, self.element_1
+            assert self.element_2 == 0, self.element_2
+            assert my_configuration.element_1 == 0, my_configuration.element_1
+            assert my_configuration.element_2 == 0, my_configuration.element_2
+
+            # test that settings without setters don't cause problems
+            my_configuration.add_setting("no_setter", default=0)
+
+            assert my_configuration.no_setter == 0
+
+            assert my_configuration.set(["no_setter"]) == None
+
+            # test that passing in nothing calls all setters
+            self.element_1 = 1
+            self.element_2 = 2
+
+            my_configuration.set()
+
+            assert self.element_1 == 0, self.element_1
+            assert self.element_2 == 0, self.element_2
+
 
 if __name__ == '__main__':
 

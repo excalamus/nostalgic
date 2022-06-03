@@ -278,3 +278,29 @@ class Configuration(metaclass=SingletonMetaclass):
                 setting.value = new_value
 
         return settings_changed
+
+    def set(self, keys=None):
+        """Apply configuration according to setters.
+
+        Parameters
+        ----------
+        keys : iterable, optional
+
+          List of setting keys whose setters should be called.
+          Default is None which calls the setter for all settings with
+          setters.
+
+        Returns
+        -------
+
+          None
+
+        """
+
+        if not keys:
+            keys = self.__dict__['_settings'].keys()
+
+        for key in keys:
+            setting = self.__dict__['_settings'][key]
+            if setting.setter:
+                setting.setter(setting.value)
