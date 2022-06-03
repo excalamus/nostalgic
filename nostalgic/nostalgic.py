@@ -29,27 +29,26 @@ class Setting:
     A Configuration is a collection of Settings.  A Setting represents
     some value which the developer wishes to persist beyond the
     immediate run.  Each Setting is identified by a key.  An optional
-    default value may be set the initial value.  If the Setting
-    corresponds to an object beside the Setting object, such as a UI
-    element, optional setter and getter functions may be set.  These
-    will be called on read and write.
+    default value provides the initial value.  If the Setting
+    corresponds to a component, such as a UI element, define optional
+    setter and getter functions to interact with the component.
 
     Parameters
     ----------
-    key : Any valid dict key, str
+    key : str
 
       Setting identifier.
 
-    default : object
+    default : object, optional
 
-      Initial value.
+      Initial value.  Default is None.
 
-    setter : callable
+    setter : callable, optional
 
-      Function which assigns the current Setting.value.  Must take 1
-      argument, the value to be set.
+      Function which assigns the current Setting.value.  Must take a
+      single argument, the value to be set.
 
-    getter : callable
+    getter : callable, optional
 
       Function which retrieves a value.  Must have no parameters and
       return a value.
@@ -101,9 +100,10 @@ class Configuration(metaclass=SingletonMetaclass):
 
     Parameters
     ----------
-    filename : path-like object
+    filename : path-like object, optional
 
-      Location on disk to read and write Settings.
+      Location on disk to read and write Settings.  Default name is
+      '<calling_module>_config', located in the user's home directory.
 
     Properties
     ----------
@@ -158,8 +158,7 @@ class Configuration(metaclass=SingletonMetaclass):
         setter : callable, optional
 
           Function to apply setting value to an external component on
-          read().  Must take a single argument for the value to be
-          set.
+          read().  Must take a single argument, the value to be set.
 
         getter : callable, optional
 
