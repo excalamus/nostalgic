@@ -8,7 +8,7 @@ application settings.
 
 - No meta-files
 - Built using only the Python standard library
-- Handle syncing with UI elements
+- Handle UI syncing
 
 # Install
 ```python
@@ -51,19 +51,19 @@ and
 self.settings.my_tracked_value
 ```
 
-Furthermore, most applications probably require only a single
+Furthermore, most applications likely require only a single
 configuration.  Nostalgic uses a Configuration singleton for this
 reason.  Instantiate a Configuration and the next time one is created,
 it will be a reference to the already extant Configuration.  This
-means explicit reference to the Configuration doesn't need to be
-passed around.
+means explicit references to the Configuration don't need to be passed
+around.
 
 # Quick Start
 A Configuration is a collection of Settings.
 
 - Use a dot to get the Setting value (like an attribute)
 - Settings can have a default initial value
-- `write()` Settings to disk and `read()` them back in.
+- `write()` settings to disk and `read()` them back in
 
 ```python
 # basic usage
@@ -194,6 +194,9 @@ some_ui_thing_the_end_user_uses: 42
 Removed config file
 
 ```
+
+Use `Configuration.set()` and `Configuration.get()` to apply or update
+settings en masse without accessing the hard disk.
 
 # Notes
 - Shadowing Configuration methods with Settings of the same name is
