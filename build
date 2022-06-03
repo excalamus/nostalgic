@@ -43,7 +43,7 @@ clean () {
 }
 
 debug () {
-    if [[ -z "$IS_DEV_DEBUG" ]]; then
+    if [[ -z "$DEV_DEBUG" ]]; then
         export DEV_DEBUG=1
         echo "Toggled debug mode on"
     else
