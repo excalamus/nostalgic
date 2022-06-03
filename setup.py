@@ -10,6 +10,8 @@ import os
 from setuptools import setup, find_packages
 
 
+VERSION = "1.2.0"
+
 with open("README.md", 'r', encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
@@ -37,7 +39,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    version="1.0.3",  # Required
+    version=VERSION,  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
