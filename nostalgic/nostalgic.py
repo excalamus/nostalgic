@@ -248,7 +248,7 @@ class Configuration(metaclass=SingletonMetaclass):
             parser.write(f)
 
     def get(self, keys=None):
-        """Call settings getters.
+        """Update configuration according to getters.
 
         Parameters
         ----------
@@ -273,8 +273,8 @@ class Configuration(metaclass=SingletonMetaclass):
         for key in keys:
             setting = self.__dict__['_settings'][key]
             if setting.getter:
-                got = setting.getter()
+                new_value = setting.getter()
                 settings_changed[key] = setting.value
-                setting.value = got
+                setting.value = new_value
 
         return settings_changed
