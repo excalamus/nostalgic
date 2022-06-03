@@ -19,7 +19,7 @@ class TestSetting:
         my_setting = nostalgic.Setting("frobnitz")
         assert hasattr(my_setting, 'key')
 
-        assert my_setting.key == 'frobnitz'
+        assert my_setting.key == 'frobnitz', my_setting.key
 
     def test_value(self):
         my_setting = nostalgic.Setting('frobnitz')
@@ -27,10 +27,10 @@ class TestSetting:
         assert hasattr(my_setting, '_default')
 
         other_setting = nostalgic.Setting('foo', default=42)
-        assert other_setting.value == 42
+        assert other_setting.value == 42, other_setting.value
 
         other_setting.value = 100
-        assert other_setting.value == 100
+        assert other_setting.value == 100, other_setting.value
 
     def test_setter(self):
         my_setting = nostalgic.Setting('frobnitz')
@@ -41,7 +41,7 @@ class TestSetting:
             self.fake_ui_element = value
 
         other_setting = nostalgic.Setting('foo', default=24)
-        assert other_setting.value == 24
+        assert other_setting.value == 24, other_setting.value
         try:
             other_setting.setter(100)
         except TypeError:
@@ -51,13 +51,13 @@ class TestSetting:
 
         next_setting = nostalgic.Setting('bar', setter=custom_setter, default=24)
 
-        assert next_setting.value == 24
-        assert self.fake_ui_element == 0
+        assert next_setting.value == 24, next_setting.value
+        assert self.fake_ui_element == 0, self.fake_ui_element
 
         next_setting.setter(100)
 
-        assert next_setting.value == 24
-        assert self.fake_ui_element == 100
+        assert next_setting.value == 24, next_setting.value
+        assert self.fake_ui_element == 100, self.fake_ui_element
 
     def test_getter(self):
         my_setting = nostalgic.Setting('frobnitz', default=24)
@@ -68,7 +68,7 @@ class TestSetting:
             return self.fake_ui_element
 
         other_setting = nostalgic.Setting('foo', default=100)
-        assert other_setting.value == 100
+        assert other_setting.value == 100, other_setting.value
         try:
             other_setting.getter() == 100
         except TypeError:
@@ -77,8 +77,8 @@ class TestSetting:
             raise AssertionError("No getter assigned. Should throw TypeError.")
 
         custom_getter_setting = nostalgic.Setting('bar', getter=custom_getter, default=200)
-        assert custom_getter_setting.value == 200
-        assert custom_getter_setting.getter() == 42
+        assert custom_getter_setting.value == 200, custom_getter_setting.value
+        assert custom_getter_setting.getter() == 42, custom_getter_setting.getter()
 
 
 class TestConfiguration:
@@ -90,20 +90,20 @@ class TestConfiguration:
         my_configuration = nostalgic.Configuration()
         my_other_settings = nostalgic.Configuration()
 
-        assert my_configuration == my_other_settings
+        assert my_configuration == my_other_settings, my_configuration
 
     def test_default_save_location(self):
         my_configuration = nostalgic.Configuration()
 
         home_directory = os.path.expanduser('~')
         default_save_location = os.path.join(home_directory, 'test_nostalgic_config')
-        assert my_configuration.config_file == default_save_location
+        assert my_configuration.config_file == default_save_location, my_configuration.config_file
 
     def test_custom_save_location(self):
         with tempfile.NamedTemporaryFile() as temp_file:
             my_configuration = nostalgic.Configuration(temp_file.name)
 
-        assert my_configuration.config_file == temp_file.name
+        assert my_configuration.config_file == temp_file.name, my_configuration.config_file
 
     ######################
     # Settings interface #
@@ -112,13 +112,13 @@ class TestConfiguration:
         my_configuration = nostalgic.Configuration()
 
         my_configuration.add_setting("foo", default="bar")
-        assert my_configuration.foo == "bar"
+        assert my_configuration.foo == "bar", my_configuration.foo
 
         my_configuration.foo = 42
 
         # check that the setting hasn't simply been replaced by an int
         assert isinstance(my_configuration['foo'], nostalgic.Setting)
-        assert my_configuration.foo == 42
+        assert my_configuration.foo == 42, my_configuration.foo
 
         # NOTE: How should we handle the edge case where a user
         # creates a Setting whose key is the same as a Configuration
@@ -147,11 +147,11 @@ class TestConfiguration:
         my_configuration.add_setting("add_setting", default="banana")
 
         # shadowed methods return the method, not the Setting
-        assert my_configuration.add_setting == nostalgic.Configuration().add_setting
+        assert my_configuration.add_setting == nostalgic.Configuration().add_setting, my_configuration.add_setting
 
         # if the user wants to shadow a method, they can reach into
         # the _settings dict
-        assert my_configuration._settings['add_setting'].value == "banana"
+        assert my_configuration._settings['add_setting'].value == "banana", my_configuration._settings['add_setting'].value
 
     def test_settings_object_access(self):
         my_configuration = nostalgic.Configuration()
@@ -163,8 +163,8 @@ class TestConfiguration:
             pass
 
         my_configuration.add_setting("foo", getter=custom_getter, setter=custom_setter)
-        assert my_configuration['foo'].getter == custom_getter
-        assert my_configuration['foo'].setter == custom_setter
+        assert my_configuration['foo'].getter == custom_getter, my_configuration['foo'].getter
+        assert my_configuration['foo'].setter == custom_setter, my_configuration['foo'].setter
 
     ###########
     # methods #
@@ -213,8 +213,8 @@ class TestConfiguration:
 
             my_configuration.read()
 
-            assert my_configuration.first == 1
-            assert my_configuration.second == "two"
+            assert my_configuration.first == 1, my_configuration.first
+            assert my_configuration.second == "two", my_configuration.second
 
             # test whether setter gets called
             assert 'third' not in my_configuration._settings
@@ -226,12 +226,12 @@ class TestConfiguration:
             my_configuration.add_setting('third', setter=custom_setter)
 
             assert my_configuration.third is None
-            assert self.fake_ui_element == 0
+            assert self.fake_ui_element == 0, self.fake_ui_element
 
             my_configuration.read()
 
-            assert my_configuration.third == 42
-            assert self.fake_ui_element == 42
+            assert my_configuration.third == 42, my_configuration.third
+            assert self.fake_ui_element == 42, self.fake_ui_element
 
             assert 'fourth' not in my_configuration._settings
 
@@ -262,21 +262,21 @@ class TestConfiguration:
             #
             # NOTE: we choose not to write the default settings
             # (e.g. config_file) to disk
-            assert text == "[General]\nfirst = 1\nsecond = \"two\"\n\n"
+            assert text == "[General]\nfirst = 1\nsecond = \"two\"\n\n", text
 
             def custom_getter():
                 return 42
 
             my_configuration.add_setting("third", default=0, getter=custom_getter)
-            assert my_configuration.third == 0
+            assert my_configuration.third == 0, my_configuration.third
 
             my_configuration.write()
 
             with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
                 text = f.read()
 
-            assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n"
-            assert my_configuration.third == 42
+            assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n", text
+            assert my_configuration.third == 42, my_configuration.third
 
             # Clean up
             # NOTE: Clean up won't happen on failure
@@ -292,7 +292,7 @@ class TestConfiguration:
         # current directory, the current directory could change and a
         # second configuration be written. Prevent these by storing
         # absolute path.
-        assert non_temp_configuration.config_file == os.path.abspath("test_config_file_right_here_please_delete")
+        assert non_temp_configuration.config_file == os.path.abspath("test_config_file_right_here_please_delete"), non_temp_configuration.config_file
 
         assert not os.path.exists(non_temp_configuration.config_file), \
             (f"Config file '{non_temp_configuration.config_file}' exists when it should not. "
@@ -310,7 +310,7 @@ class TestConfiguration:
         with open(non_temp_configuration.config_file, 'r', encoding='utf-8') as f:
             text = f.read()
 
-        assert text == "[General]\ntest = true\n\n"
+        assert text == "[General]\ntest = true\n\n", text
 
         # Clean up
         # NOTE: Clean up won't happen on failure
@@ -336,12 +336,12 @@ class TestConfiguration:
 
             my_configuration.add_setting("element_1", default=0, getter=get_element_1)
 
-            assert self.element_1 == 42
-            assert my_configuration.element_1 == 0
+            assert self.element_1 == 42, self.element_1
+            assert my_configuration.element_1 == 0, my_configuration.element_1
 
             my_configuration.get(["element_1"])
 
-            assert my_configuration.element_1 == 42
+            assert my_configuration.element_1 == 42, my_configuration.element_1
 
             # test that settings are called separately
             self.element_1 = 24
@@ -350,29 +350,29 @@ class TestConfiguration:
             def get_element_2():
                 return self.element_2
 
-            assert self.element_1 == 24
-            assert self.element_2 == 50
+            assert self.element_1 == 24, self.element_1
+            assert self.element_2 == 50, self.element_2
 
             my_configuration.add_setting("element_2", default=0, getter=get_element_2)
 
-            assert my_configuration.element_1 == 42
-            assert my_configuration.element_2 == 0
+            assert my_configuration.element_1 == 42, my_configuration.element_1
+            assert my_configuration.element_2 == 0, my_configuration.element_2
 
             my_configuration.get(["element_2"])
 
-            assert my_configuration.element_1 == 42
-            assert my_configuration.element_2 == 50
+            assert my_configuration.element_1 == 42, my_configuration.element_1
+            assert my_configuration.element_2 == 50, my_configuration.element_2
 
             # test that multiple elements can be passed in
             self.element_2 = 10
 
-            assert my_configuration.element_1 == 42
-            assert my_configuration.element_2 == 50
+            assert my_configuration.element_1 == 42, my_configuration.element_1
+            assert my_configuration.element_2 == 50, my_configuration.element_2
 
             my_configuration.get(["element_1", "element_2"])
 
-            assert my_configuration.element_1 == 24
-            assert my_configuration.element_2 == 10
+            assert my_configuration.element_1 == 24, my_configuration.element_1
+            assert my_configuration.element_2 == 10, my_configuration.element_2
 
             # test that success returns the value before the get
             self.element_1 = 1
@@ -380,18 +380,18 @@ class TestConfiguration:
 
             rv = my_configuration.get(["element_1", "element_2"])
 
-            assert rv == {"element_1": 24, "element_2": 10}
-            assert my_configuration.element_1 == 1
-            assert my_configuration.element_2 == 2
+            assert rv == {"element_1": 24, "element_2": 10}, rv
+            assert my_configuration.element_1 == 1, my_configuration.element_1
+            assert my_configuration.element_2 == 2, my_configuration.element_2
 
             # test that settings without getters don't cause problems
             my_configuration.add_setting("no_getter", default=0)
 
-            assert my_configuration.no_getter == 0
+            assert my_configuration.no_getter == 0, my_configuration.no_getter
 
             rv = my_configuration.get(["no_getter"])
 
-            assert rv == {}
+            assert rv == {}, rv
 
             # test that passing in nothing calls all getters
             self.element_1 = 1
@@ -399,12 +399,8 @@ class TestConfiguration:
 
             my_configuration.get()
 
-            assert my_configuration.element_1 == 1
-            assert my_configuration.element_2 == 2
-
-
-
-
+            assert my_configuration.element_1 == 1, my_configuration.element_1
+            assert my_configuration.element_2 == 2, my_configuration.element_2
 
 
 if __name__ == '__main__':
@@ -469,3 +465,20 @@ if __name__ == '__main__':
     print(f"Success:{len(tests_to_run)-failed}", flush=True)
     print(f"Fail:\t{failed} ", flush=True)
     print(f"Total:\t{len(tests_to_run)}\tTime: {(elapsed/60):.0f}:{(elapsed%60):.0f}", flush=True)
+
+# There isn't an easy way to make an assert statement show what the
+# expected value was using Python.  The only way is to put it there
+# manually.
+#
+# The following emacs-evil macros do just that.  The first macro is
+# assigned to "@a". It looks for the next expression between "assert"
+# and "==" and places it at the end of the occurring line after a
+# comma.  The second macro is assigned to "@c" and works on the
+# current line.
+#
+# See: https://stackoverflow.com/a/22820324
+#
+# Local Variables:
+# eval: (evil-set-register ?a [?/ ?= ?= return ?? ?a ?s ?s ?e ?r ?t return ?w ?\C-v ?/ ?= ?= return ?g ?e ?y ?A ?, ?  escape ?p])
+# eval: (evil-set-register ?c [?0 ?w ?w ?\C-v ?/ ?= ?= return ?g ?e ?y ?A ?, ?  escape ?p])
+# End:
