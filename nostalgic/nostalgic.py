@@ -182,10 +182,8 @@ class Configuration(metaclass=SingletonMetaclass):
         if overwrite:
             warnings.warn(f"[WARNING]: Setting '{key}' was overwritten", OverwriteWarning)
 
-    def read(self, filename=None):
+    def read(self, filename=None, sync=True):
         """Load settings from disk.
-
-        Settings with setters will have them called after read.
 
         Parameters
         ----------
@@ -193,6 +191,10 @@ class Configuration(metaclass=SingletonMetaclass):
 
           Path to configuration file.  Default location is
           Configuration().config_file.
+
+        sync : bool, optional
+
+          Call setters. Default is True.
 
         """
 
@@ -210,13 +212,11 @@ class Configuration(metaclass=SingletonMetaclass):
                 raw_value = parser['General'][key]
                 value = json.loads(raw_value)
                 setting.value = value
-                if setting.setter:
+                if sync and setting.setter:
                     setting.setter(value)
 
-    def write(self, filename=None):
+    def write(self, filename=None, sync=True):
         """Save settings to disk.
-
-        Settings with getters will have them called before write.
 
         Parameters
         ----------
@@ -224,6 +224,10 @@ class Configuration(metaclass=SingletonMetaclass):
 
           Path to configuration file.  Default location is
           Configuration().config_file.
+
+        sync : bool, optional
+
+          Call getters. Default is True.
 
         """
 
@@ -238,7 +242,7 @@ class Configuration(metaclass=SingletonMetaclass):
 
         for key, setting in self.__dict__['_settings'].items():
             if key != 'config_file':
-                if setting.getter:
+                if sync and setting.getter:
                     setting.value = setting.getter()
                 value = json.dumps(setting.value)
                 parser.set('General', key, value)

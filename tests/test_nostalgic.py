@@ -7,6 +7,9 @@ import traceback
 import nostalgic
 
 
+# TODO refactor tests into smaller units
+
+
 def post_test_clean_up():
     """Run after each test."""
     # clear singleton so that runs are separate
@@ -192,7 +195,7 @@ class TestConfiguration:
             temp_file = os.path.join(temp_dir, "test")
 
             with open(temp_file, 'w', encoding='utf-8') as f:
-                test_config = "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\nforth = \"four\""
+                test_config = "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\nforth = \"four\"\nfifth = \"was set\""
                 f.write(test_config)
 
             my_configuration = nostalgic.Configuration(temp_file)
@@ -216,7 +219,7 @@ class TestConfiguration:
             assert my_configuration.first == 1, my_configuration.first
             assert my_configuration.second == "two", my_configuration.second
 
-            # test whether setter gets called
+            # test whether setter gets called by default
             assert 'third' not in my_configuration._settings
 
             self.fake_ui_element = 0
@@ -234,6 +237,22 @@ class TestConfiguration:
             assert self.fake_ui_element == 42, self.fake_ui_element
 
             assert 'fourth' not in my_configuration._settings
+
+            # test that calling setters can be disabled
+            self.fifth_element = "not set"
+            def set_fifth(value):
+                self.fifth_element = value
+
+            my_configuration.add_setting("fifth", default="default", setter=set_fifth)
+
+            assert self.fifth_element == "not set", self.fifth_element
+            assert my_configuration.fifth == "default", my_configuration.fifth
+
+            my_configuration.read(sync=False)
+
+            # only the configuration should have changed
+            assert self.fifth_element == "not set", self.fifth_element
+            assert my_configuration.fifth == "was set", my_configuration.fifth
 
     def test_write(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -277,6 +296,21 @@ class TestConfiguration:
 
             assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n", text
             assert my_configuration.third == 42, my_configuration.third
+
+            # test that calling getters can be disabled
+            def getter_that_gets_disabled():
+                return "getter called when it shouldn't have been"
+
+            my_configuration.add_setting(
+                "test_sync_disable",
+                default="default",
+                getter=getter_that_gets_disabled)
+
+            assert my_configuration.test_sync_disable == "default", my_configuration.test_sync_disable
+
+            my_configuration.write(sync=False)
+
+            assert my_configuration.test_sync_disable == "default", my_configuration.test_sync_disable
 
             # Clean up
             # NOTE: Clean up won't happen on failure
