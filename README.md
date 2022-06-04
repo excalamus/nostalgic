@@ -195,6 +195,9 @@ Removed config file
 
 ```
 
+Use the `sync` parameter of `read()` and `write()` to toggle whether
+setters or getters are called.
+
 Use `Configuration.set()` and `Configuration.get()` to apply or update
 settings en masse without accessing the hard disk.
 
