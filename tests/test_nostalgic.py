@@ -7,7 +7,74 @@ import traceback
 import nostalgic
 
 
-# TODO refactor tests into smaller units
+def main():
+    # Run options:
+    ONLY_SHOW_FAILS = True
+    BREAK_ON_FIRST_FAIL = True
+
+    test_suites = {
+        'setting': TestSetting(),
+        'configuration': TestConfiguration(),
+    }
+
+    test_functions = [
+        getattr(suite, m)
+        for suite in test_suites.values()
+        for m in dir(suite)
+        if m[:4] == 'test'
+    ]
+
+    tests_to_run = [
+        *test_functions,
+        # test_suites['setting'].test_setter,
+        # test_suites['setting'].test_getter,
+        # test_suites['configuration'].test_setting_value_access,
+        # test_suites['configuration'].test_custom_save_location,
+        # test_suites['configuration'].test_read,
+        # test_suites['configuration'].test_write,
+        # test_suites['configuration'].test_add_setting,
+    ]
+
+    tests_to_skip = [
+        # test_suites['configuration'].test_read,
+        # test_suites['configuration'].test_write,
+    ]
+
+    tests_to_run = [test for test in tests_to_run if test not in tests_to_skip]
+
+    tests_failed = 0
+    tests_passed = 0
+    tests_run = 0
+    start = time.time()
+
+    # NOTE: tests run in alphabetical ordering not in declared ordered.
+    # Introspect the code to get the order they're declared in.
+    for test in tests_to_run:
+        tests_run += 1
+        if not ONLY_SHOW_FAILS: print(f"----------", flush=True)
+
+        try:
+            if not ONLY_SHOW_FAILS: print(f"  Running: {test.__name__}", flush=True)
+            test()
+            if not ONLY_SHOW_FAILS: print(f"  [PASS]", flush=True)
+            tests_passed += 1
+        except Exception as ex:
+            tests_failed += 1
+            print(f"  [FAIL]: {test.__self__.__class__.__name__}.{test.__name__}\n{ex}", flush=True)
+            print(f"{traceback.format_exc()}", flush=True)
+            if BREAK_ON_FIRST_FAIL: break
+
+        post_test_clean_up()
+
+    stop = time.time()
+    elapsed = stop-start
+    print(f"----------", flush=True)
+    if ONLY_SHOW_FAILS and tests_failed == 0:
+        print(f"  [PASS]", flush=True)
+
+    print(f"Success:{tests_passed}", flush=True)
+    print(f"Fail:\t{tests_failed} ", flush=True)
+    print(f"Total:\t{tests_passed + tests_failed}\tTime: {(elapsed/60):.0f}:{(elapsed%60):.0f}", flush=True)
 
 
 def post_test_clean_up():
@@ -524,81 +591,4 @@ class TestConfiguration:
 
 
 if __name__ == '__main__':
-
-    test_suites = {
-        'setting': TestSetting(),
-        'configuration': TestConfiguration(),
-    }
-
-    test_functions = [
-        getattr(suite, m)
-        for suite in test_suites.values()
-        for m in dir(suite)
-        if m[:4] == 'test'
-    ]
-
-    tests_to_run = [
-        *test_functions,
-        # test_suites['setting'].test_setter,
-        # test_suites['setting'].test_getter,
-        # test_suites['configuration'].test_setting_value_access,
-        # test_suites['configuration'].test_custom_save_location,
-        # test_suites['configuration'].test_read,
-        # test_suites['configuration'].test_write,
-        # test_suites['configuration'].test_add_setting,
-    ]
-
-    tests_to_skip = [
-        # test_suites['configuration'].test_read,
-        # test_suites['configuration'].test_write,
-    ]
-
-    tests_to_run = [test for test in tests_to_run if test not in tests_to_skip]
-
-    failed = 0
-    start = time.time()
-
-    ONLY_SHOW_FAILS = True
-
-    # NOTE: tests run in alphabetical ordering.  Introspect the code
-    # to get the order they're declared in.
-    for test in tests_to_run:
-        if not ONLY_SHOW_FAILS: print(f"----------", flush=True)
-
-        try:
-            if not ONLY_SHOW_FAILS: print(f"  Running: {test.__name__}", flush=True)
-            test()
-            if not ONLY_SHOW_FAILS: print(f"  [PASS]", flush=True)
-        except Exception as ex:
-            failed += 1
-            print(f"  [FAIL]: {test.__self__.__class__.__name__}.{test.__name__}\n{ex}", flush=True)
-            print(f"{traceback.format_exc()}", flush=True)
-
-        post_test_clean_up()
-
-    stop = time.time()
-    elapsed = stop-start
-    print(f"----------", flush=True)
-    if ONLY_SHOW_FAILS and failed == 0:
-        print(f"  [PASS]", flush=True)
-
-    print(f"Success:{len(tests_to_run)-failed}", flush=True)
-    print(f"Fail:\t{failed} ", flush=True)
-    print(f"Total:\t{len(tests_to_run)}\tTime: {(elapsed/60):.0f}:{(elapsed%60):.0f}", flush=True)
-
-# There isn't an easy way to make an assert statement show what the
-# expected value was using Python.  The only way is to put it there
-# manually.
-#
-# The following emacs-evil macros do just that.  The first macro is
-# assigned to "@a". It looks for the next expression between "assert"
-# and "==" and places it at the end of the occurring line after a
-# comma.  The second macro is assigned to "@c" and works on the
-# current line.
-#
-# See: https://stackoverflow.com/a/22820324
-#
-# Local Variables:
-# eval: (evil-set-register ?a [?/ ?= ?= return ?? ?a ?s ?s ?e ?r ?t return ?w ?\C-v ?/ ?= ?= return ?g ?e ?y ?A ?, ?  escape ?p])
-# eval: (evil-set-register ?c [?0 ?w ?w ?\C-v ?/ ?= ?= return ?g ?e ?y ?A ?, ?  escape ?p])
-# End:
+    main()
