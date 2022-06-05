@@ -1,3 +1,28 @@
+# test_nostalgic.py – Test suite for Nostalgic
+#
+# Run tests with
+#
+#   python test_nostalgic.py
+#
+# See main() for run options.
+#
+# NOTE: There isn't an easy way to make an assert statement show what
+# the expected value was using Python.  The only way is to write it
+# manually.
+#
+# The following are Emacs Evil mode macros to automate writing the
+# expected value.  The first macro is assigned to "@a". It looks for
+# the next expression between "assert" and "==" and places it at the
+# end of the occurring line after a comma.  The second macro is
+# assigned to "@c" and works on the current line.
+#
+# See: https://stackoverflow.com/a/22820324
+#
+# Local Variables:
+# eval: (evil-set-register ?a [?/ ?= ?= return ?? ?a ?s ?s ?e ?r ?t return ?w ?\C-v ?/ ?= ?= return ?g ?e ?y ?A ?, ?  escape ?p])
+# eval: (evil-set-register ?c [?0 ?w ?w ?\C-v ?/ ?= ?= return ?g ?e ?y ?A ?, ?  escape ?p])
+# End:
+
 import os
 import time
 import tempfile
