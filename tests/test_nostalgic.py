@@ -109,71 +109,68 @@ def post_test_clean_up():
 
 
 class TestSetting:
+    """Setting object test suite."""
 
-    def test_key(self):
-        my_setting = nostalgic.Setting("frobnitz")
-        assert hasattr(my_setting, 'key')
+    def test_has_key(self):
+        foo_setting = nostalgic.Setting("foo")
+        assert hasattr(foo_setting, 'key'), "Setting needs a 'key' attribute"
 
-        assert my_setting.key == 'frobnitz', my_setting.key
+        assert foo_setting.key == "foo", foo_setting.key
 
-    def test_value(self):
-        my_setting = nostalgic.Setting('frobnitz')
-        assert hasattr(my_setting, 'value')
-        assert hasattr(my_setting, '_default')
+    def test_has_value(self):
+        foo_setting = nostalgic.Setting("foo")
+        assert hasattr(foo_setting, 'value'), "Setting needs a 'value' attribute"
 
-        other_setting = nostalgic.Setting('foo', default=42)
-        assert other_setting.value == 42, other_setting.value
+    def test_has_default_with_optional_argument(self):
+        foo_setting = nostalgic.Setting("foo")
+        assert hasattr(foo_setting, '_default'), "Setting needs a '_default' attribute"
 
-        other_setting.value = 100
-        assert other_setting.value == 100, other_setting.value
+    def test_default_argument_sets_initial_value(self):
+        foo_setting = nostalgic.Setting("foo", default="bar")
+        assert foo_setting.value == "bar", foo_setting.value
 
-    def test_setter(self):
-        my_setting = nostalgic.Setting('frobnitz')
-        assert hasattr(my_setting, 'setter')
+    def test_value_independent_from_default(self):
+        foo_setting = nostalgic.Setting("foo", default="bar")
 
-        self.fake_ui_element = 0
+        foo_setting.value = "baz"
+
+        assert foo_setting.value == "baz", foo_setting.value
+        assert foo_setting._default == "bar", foo_setting._default
+
+    def test_has_setter_with_optional_argument(self):
+        foo_setting = nostalgic.Setting("foo")
+        assert hasattr(foo_setting, "setter"), "Setting needs a 'setter' attribute"
+
+    def test_setter_sets_external_variable_only(self):
+        self.ui_element = "not set"
+
         def custom_setter(value):
-            self.fake_ui_element = value
+            self.ui_element = value
 
-        other_setting = nostalgic.Setting('foo', default=24)
-        assert other_setting.value == 24, other_setting.value
-        try:
-            other_setting.setter(100)
-        except TypeError:
-            pass
-        else:
-            raise AssertionError("No setter assigned.  Should throw TypeError.")
+        foo_setting = nostalgic.Setting("foo", default="foo default", setter=custom_setter)
 
-        next_setting = nostalgic.Setting('bar', setter=custom_setter, default=24)
+        assert self.ui_element == "not set", self.ui_element
+        assert foo_setting.value == "foo default", foo_setting.value
 
-        assert next_setting.value == 24, next_setting.value
-        assert self.fake_ui_element == 0, self.fake_ui_element
+        foo_setting.setter("value was set")
 
-        next_setting.setter(100)
+        assert self.ui_element == "value was set", self.ui_element
+        assert foo_setting.value == "foo default", foo_setting.value
 
-        assert next_setting.value == 24, next_setting.value
-        assert self.fake_ui_element == 100, self.fake_ui_element
+    def test_has_getter_with_optional_argument(self):
+        foo_setting = nostalgic.Setting("foo")
+        assert hasattr(foo_setting, "getter"), "Setting needs a 'getter' attribute"
 
-    def test_getter(self):
-        my_setting = nostalgic.Setting('frobnitz', default=24)
-        assert hasattr(my_setting, 'getter')
+    def test_getter_gets_external_variable_only(self):
+        self.ui_element = "ui element value"
 
-        self.fake_ui_element = 42
         def custom_getter():
-            return self.fake_ui_element
+            return self.ui_element
 
-        other_setting = nostalgic.Setting('foo', default=100)
-        assert other_setting.value == 100, other_setting.value
-        try:
-            other_setting.getter() == 100
-        except TypeError:
-            pass
-        else:
-            raise AssertionError("No getter assigned. Should throw TypeError.")
+        foo_setting = nostalgic.Setting("foo", default="bar", getter=custom_getter)
 
-        custom_getter_setting = nostalgic.Setting('bar', getter=custom_getter, default=200)
-        assert custom_getter_setting.value == 200, custom_getter_setting.value
-        assert custom_getter_setting.getter() == 42, custom_getter_setting.getter()
+        assert foo_setting.getter() == "ui element value", foo_setting.getter()
+        assert foo_setting.value == "bar", foo_setting.value
 
 
 class TestConfiguration:
@@ -212,7 +209,7 @@ class TestConfiguration:
         my_configuration.foo = 42
 
         # check that the setting hasn't simply been replaced by an int
-        assert isinstance(my_configuration['foo'], nostalgic.Setting)
+        assert isinstance(my_configuration["foo"], nostalgic.Setting)
         assert my_configuration.foo == 42, my_configuration.foo
 
         # NOTE: How should we handle the edge case where a user
@@ -258,8 +255,8 @@ class TestConfiguration:
             pass
 
         my_configuration.add_setting("foo", getter=custom_getter, setter=custom_setter)
-        assert my_configuration['foo'].getter == custom_getter, my_configuration['foo'].getter
-        assert my_configuration['foo'].setter == custom_setter, my_configuration['foo'].setter
+        assert my_configuration["foo"].getter == custom_getter, my_configuration["foo"].getter
+        assert my_configuration["foo"].setter == custom_setter, my_configuration["foo"].setter
 
     ###########
     # methods #
@@ -271,7 +268,7 @@ class TestConfiguration:
         assert callable(my_configuration.add_setting)
 
         my_configuration.add_setting("foo")
-        assert isinstance(my_configuration['foo'], nostalgic.Setting)
+        assert isinstance(my_configuration["foo"], nostalgic.Setting)
 
         with warnings.catch_warnings() as w:
             warnings.filterwarnings("error")
