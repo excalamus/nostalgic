@@ -179,6 +179,7 @@ class TestSetting:
 
 
 class TestConfiguration:
+    """Configuration object test suite."""
 
     def test_only_a_single_configuration_object_can_be_made(self):
         my_config    = nostalgic.Configuration()
@@ -780,6 +781,134 @@ class TestConfiguration:
 
         assert self.element_1 == "default 1", self.element_1
         assert self.element_2 == "default 2", self.element_2
+
+    def test_set__use_default_argument_sets_default_values(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        my_config.element_1 = "not default 1"
+        my_config.element_2 = "not default 2"
+
+        assert my_config.element_1 == "not default 1", my_config.element_1
+        assert my_config.element_2 == "not default 2", my_config.element_2
+
+        my_config.set(use_defaults=True)
+
+        assert self.element_1 == "default 1", self.element_1
+        assert self.element_2 == "default 2", self.element_2
+
+    def test_set__sets_value_not_default_value_by_default(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        my_config.element_1 = "not default 1"
+        my_config.element_2 = "not default 2"
+
+        assert my_config.element_1 == "not default 1", my_config.element_1
+        assert my_config.element_2 == "not default 2", my_config.element_2
+
+        my_config.set()
+
+        assert self.element_1 == "not default 1", self.element_1
+        assert self.element_2 == "not default 2", self.element_2
+
+        my_config.set(use_defaults=False)
+
+        assert self.element_1 == "not default 1", self.element_1
+        assert self.element_2 == "not default 2", self.element_2
+
+    def test_set__use_default_argument_doesnt_reassign_setting_value(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        my_config.element_1 = "not default 1"
+        my_config.element_2 = "not default 2"
+
+        assert my_config.element_1 == "not default 1", my_config.element_1
+        assert my_config.element_2 == "not default 2", my_config.element_2
+
+        my_config.set(use_defaults=True)
+
+        assert self.element_1 == "default 1", self.element_1
+        assert self.element_2 == "default 2", self.element_2
+
+        assert my_config.element_1 == "not default 1", my_config.element_1
+        assert my_config.element_2 == "not default 2", my_config.element_2
+
+    def test_set__use_default_argument_with_sync_argument_reassigns_setting_values_to_default(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        my_config.element_1 = "not default 1"
+        my_config.element_2 = "not default 2"
+
+        assert my_config.element_1 == "not default 1", my_config.element_1
+        assert my_config.element_2 == "not default 2", my_config.element_2
+
+        my_config.set(use_defaults=True, sync=True)
+
+        assert self.element_1 == "default 1", self.element_1
+        assert self.element_2 == "default 2", self.element_2
+
+        assert my_config.element_1 == "default 1", my_config.element_1
+        assert my_config.element_2 == "default 2", my_config.element_2
+
 
 
 if __name__ == '__main__':

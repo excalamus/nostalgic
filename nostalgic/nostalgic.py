@@ -125,7 +125,7 @@ class Configuration(metaclass=SingletonMetaclass):
         filename = os.path.abspath(filename)
 
         # must define this way since we're overriding __setattr__
-        self.__dict__['_settings'] = {}  # TODO mangle?
+        self.__dict__['_settings'] = {}
 
         # Default Settings
         self.add_setting('config_file', filename)
@@ -285,7 +285,7 @@ class Configuration(metaclass=SingletonMetaclass):
 
         return settings_changed
 
-    def set(self, keys=None):
+    def set(self, keys=None, use_defaults=False, sync=False):
         """Apply configuration according to setters.
 
         Parameters
@@ -295,6 +295,15 @@ class Configuration(metaclass=SingletonMetaclass):
           List of setting keys whose setters should be called.
           Default is None which calls the setter for all settings with
           setters.
+
+        use_defaults : bool, optional
+
+          Call setters using default Setting value.  Default is False.
+
+        sync : bool, optional
+
+          When used with use_defaults=True, also update Settings with
+          default values.  Default is False.
 
         Returns
         -------
@@ -309,4 +318,9 @@ class Configuration(metaclass=SingletonMetaclass):
         for key in keys:
             setting = self.__dict__['_settings'][key]
             if setting.setter:
-                setting.setter(setting.value)
+                if use_defaults:
+                    setting.setter(setting._default)
+                    if sync:
+                        setting.value = setting._default
+                else:
+                    setting.setter(setting.value)
