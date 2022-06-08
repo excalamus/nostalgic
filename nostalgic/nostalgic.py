@@ -59,7 +59,7 @@ class Setting:
 
         self.key      = key
         self._default = default
-        self.value   = self._default
+        self.value    = self._default
         self.setter   = setter
         self.getter   = getter
 

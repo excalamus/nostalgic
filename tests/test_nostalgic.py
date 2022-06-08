@@ -58,6 +58,7 @@ def main():
         # test_suites['configuration'].test_read,
         # test_suites['configuration'].test_write,
         # test_suites['configuration'].test_add_setting,
+        # test_suites['configuration'].test_get_calls_getters_separately,
     ]
 
     tests_to_skip = [
@@ -72,8 +73,10 @@ def main():
     tests_run = 0
     start = time.time()
 
-    # NOTE: tests run in alphabetical ordering not in declared ordered.
-    # Introspect the code to get the order they're declared in.
+    # NOTE: tests run in alphabetical ordering not in declared
+    # ordered.  Either implement code introspection to get the order
+    # they're declared in or declare the order explicitly in
+    # tests_to_run.
     for test in tests_to_run:
         tests_run += 1
         if not ONLY_SHOW_FAILS: print(f"----------", flush=True)
@@ -87,7 +90,9 @@ def main():
             tests_failed += 1
             print(f"  [FAIL]: {test.__self__.__class__.__name__}.{test.__name__}\n{ex}", flush=True)
             print(f"{traceback.format_exc()}", flush=True)
-            if BREAK_ON_FIRST_FAIL: break
+            if BREAK_ON_FIRST_FAIL:
+                print(f"BROKE ON FIRST FAIL", flush=True)
+                break
 
         post_test_clean_up()
 
@@ -121,7 +126,7 @@ class TestSetting:
         foo_setting = nostalgic.Setting("foo")
         assert hasattr(foo_setting, 'value'), "Setting needs a 'value' attribute"
 
-    def test_has_default_with_optional_argument(self):
+    def test_has_optional_default(self):
         foo_setting = nostalgic.Setting("foo")
         assert hasattr(foo_setting, '_default'), "Setting needs a '_default' attribute"
 
@@ -137,7 +142,7 @@ class TestSetting:
         assert foo_setting.value == "baz", foo_setting.value
         assert foo_setting._default == "bar", foo_setting._default
 
-    def test_has_setter_with_optional_argument(self):
+    def test_has_optional_setter(self):
         foo_setting = nostalgic.Setting("foo")
         assert hasattr(foo_setting, "setter"), "Setting needs a 'setter' attribute"
 
@@ -157,7 +162,7 @@ class TestSetting:
         assert self.ui_element == "value was set", self.ui_element
         assert foo_setting.value == "foo default", foo_setting.value
 
-    def test_has_getter_with_optional_argument(self):
+    def test_has_optional_getter(self):
         foo_setting = nostalgic.Setting("foo")
         assert hasattr(foo_setting, "getter"), "Setting needs a 'getter' attribute"
 
@@ -175,43 +180,73 @@ class TestSetting:
 
 class TestConfiguration:
 
-    ########################
-    # Configuration object #
-    ########################
-    def test_singleton(self):
-        my_configuration = nostalgic.Configuration()
-        my_other_settings = nostalgic.Configuration()
+    def test_only_a_single_configuration_object_can_be_made(self):
+        my_config    = nostalgic.Configuration()
+        other_config = nostalgic.Configuration()
 
-        assert my_configuration == my_other_settings, my_configuration
+        assert my_config == other_config, f"All configurations should be the same object\n{my_config=}\n{other_config=}"
 
     def test_default_save_location(self):
-        my_configuration = nostalgic.Configuration()
-
-        home_directory = os.path.expanduser('~')
+        my_config             = nostalgic.Configuration()
+        home_directory        = os.path.expanduser('~')
         default_save_location = os.path.join(home_directory, 'test_nostalgic_config')
-        assert my_configuration.config_file == default_save_location, my_configuration.config_file
+
+        assert my_config.config_file == default_save_location, my_config.config_file
 
     def test_custom_save_location(self):
         with tempfile.NamedTemporaryFile() as temp_file:
-            my_configuration = nostalgic.Configuration(temp_file.name)
+            my_config = nostalgic.Configuration(temp_file.name)
 
-        assert my_configuration.config_file == temp_file.name, my_configuration.config_file
+            assert my_config.config_file == temp_file.name, my_config.config_file
 
-    ######################
-    # Settings interface #
-    ######################
-    def test_setting_value_access(self):
-        my_configuration = nostalgic.Configuration()
+    def test_has_add_setting_method(self):
+        my_config = nostalgic.Configuration()
 
-        my_configuration.add_setting("foo", default="bar")
-        assert my_configuration.foo == "bar", my_configuration.foo
+        assert hasattr(my_config, 'add_setting')
+        assert callable(my_config.add_setting)
 
-        my_configuration.foo = 42
+    def test_attribute_assignment_sets_setting_value(self):
+        my_config = nostalgic.Configuration()
+        my_config.add_setting("foo")
+
+        my_config.foo = 42
 
         # check that the setting hasn't simply been replaced by an int
-        assert isinstance(my_configuration["foo"], nostalgic.Setting)
-        assert my_configuration.foo == 42, my_configuration.foo
+        assert isinstance(my_config["foo"], nostalgic.Setting)
+        assert my_config.foo == 42, my_config.foo
 
+    def test_add_setting__adds_a_setting_object(self):
+        my_config = nostalgic.Configuration()
+
+        my_config.add_setting("foo")
+        assert isinstance(my_config.__dict__['_settings']["foo"], nostalgic.Setting)
+
+    def test_add_setting__overwriting_setting_raises_warning(self):
+        my_config = nostalgic.Configuration()
+        my_config.add_setting("foo")
+
+        with warnings.catch_warnings() as w:
+            warnings.filterwarnings("error")
+            try:
+                my_config.add_setting("foo", default="banana")
+            except nostalgic.OverwriteWarning:
+                pass
+            else:
+                raise AssertionError("Overwriting a setting does not raise a warning!")
+
+    def test_add_setting__shadow_class_method_with_setting_of_same_name_throws_warning(self):
+        my_config = nostalgic.Configuration()
+
+        with warnings.catch_warnings() as w:
+            warnings.filterwarnings("error")
+            try:
+                my_config.add_setting("add_setting", default="banana")
+            except nostalgic.ShadowWarning:
+                pass
+            else:
+                raise AssertionError("Shadowing a bound method does not raise a warning!")
+
+    def test_add_setting__shadow_class_method_with_setting_of_same_name_returns_method(self):
         # NOTE: How should we handle the edge case where a user
         # creates a Setting whose key is the same as a Configuration
         # method?  With the implementation at the time of writing
@@ -224,144 +259,149 @@ class TestConfiguration:
         # that this "default behavior" doesn't change from beneath us.
         #
         # See: https://tenthousandmeters.com/blog/python-behind-the-scenes-7-how-python-attributes-work/
-        with warnings.catch_warnings() as w:
-            warnings.filterwarnings("error")
-            try:
-                my_configuration.add_setting("add_setting", default="banana")
-            except nostalgic.ShadowWarning:
-                pass
-            else:
-                raise AssertionError("Shadowing a bound method does not raise a warning!")
+        my_config = nostalgic.Configuration()
 
-        # the context above elevated the warning to an error, causing
-        # the setting to not be added. Redo now that the warning is no
-        # longer considered an error
-        my_configuration.add_setting("add_setting", default="banana")
+        my_config.add_setting("add_setting", default="banana")
 
         # shadowed methods return the method, not the Setting
-        assert my_configuration.add_setting == nostalgic.Configuration().add_setting, my_configuration.add_setting
+        assert my_config.add_setting == nostalgic.Configuration().add_setting, my_config.add_setting
 
         # if the user wants to shadow a method, they can reach into
-        # the _settings dict
-        assert my_configuration._settings['add_setting'].value == "banana", my_configuration._settings['add_setting'].value
+        # the _settings dict to get the value
+        assert my_config._settings['add_setting'].value == "banana", my_config._settings['add_setting'].value
 
-    def test_settings_object_access(self):
-        my_configuration = nostalgic.Configuration()
-
-        def custom_getter():
-            pass
+    def test_add_setting__takes_optional_setter(self):
+        my_config = nostalgic.Configuration()
 
         def custom_setter(value):
             pass
 
-        my_configuration.add_setting("foo", getter=custom_getter, setter=custom_setter)
-        assert my_configuration["foo"].getter == custom_getter, my_configuration["foo"].getter
-        assert my_configuration["foo"].setter == custom_setter, my_configuration["foo"].setter
+        my_config.add_setting("foo", setter=custom_setter)
+        assert my_config["foo"].setter == custom_setter, my_config["foo"].setter
 
-    ###########
-    # methods #
-    ###########
-    def test_add_setting(self):
-        my_configuration = nostalgic.Configuration()
+    def test_add_setting__takes_optional_getter(self):
+        my_config = nostalgic.Configuration()
 
-        assert hasattr(my_configuration, 'add_setting')
-        assert callable(my_configuration.add_setting)
+        def custom_getter():
+            pass
 
-        my_configuration.add_setting("foo")
-        assert isinstance(my_configuration["foo"], nostalgic.Setting)
+        my_config.add_setting("foo", getter=custom_getter)
+        assert my_config["foo"].getter == custom_getter, my_config["foo"].getter
 
-        with warnings.catch_warnings() as w:
-            warnings.filterwarnings("error")
-            try:
-                my_configuration.add_setting("foo", default="banana")
-            except nostalgic.OverwriteWarning:
-                pass
-            else:
-                raise AssertionError("Overwriting a setting does not raise a warning!")
+    def test_has_read_method(self):
+        my_config = nostalgic.Configuration()
 
-    def test_read(self):
+        assert hasattr(my_config, 'read')
+        assert callable(my_config.read)
+
+    def test_read__loads_declared_settings_from_disk(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file = os.path.join(temp_dir, "test")
 
             with open(temp_file, 'w', encoding='utf-8') as f:
-                test_config = "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\nforth = \"four\"\nfifth = \"was set\""
+                test_config = "[General]\nfirst = 1\nsecond = \"two\""
                 f.write(test_config)
 
-            my_configuration = nostalgic.Configuration(temp_file)
+            my_config = nostalgic.Configuration(temp_file)
 
-            assert hasattr(my_configuration, 'read')
-            assert callable(my_configuration.read)
+            my_config.read()
 
-            # only load declared Settings
-            my_configuration.read()
-            assert 'first' not in my_configuration._settings
-            assert 'second' not in my_configuration._settings
+            # prove that nothing was read from disk into the
+            # configuration
+            assert 'first' not in my_config._settings
+            assert 'second' not in my_config._settings
 
-            my_configuration.add_setting("first")
-            my_configuration.add_setting("second")
+            my_config.add_setting("first")
+            my_config.add_setting("second")
 
-            assert my_configuration.first is None
-            assert my_configuration.second is None
+            # confirm that the newly added settings are blank
+            assert my_config.first is None
+            assert my_config.second is None
 
-            my_configuration.read()
+            my_config.read()
 
-            assert my_configuration.first == 1, my_configuration.first
-            assert my_configuration.second == "two", my_configuration.second
+            # now that the settings are declared, they are read in
+            assert my_config.first == 1, my_config.first
+            assert my_config.second == "two", my_config.second
 
-            # test whether setter gets called by default
-            assert 'third' not in my_configuration._settings
+    def test_read__calls_setters_by_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                test_config = "[General]\nthird = 42"
+                f.write(test_config)
+
+            my_config = nostalgic.Configuration(temp_file)
 
             self.fake_ui_element = 0
+
             def custom_setter(value):
                 self.fake_ui_element = value
 
-            my_configuration.add_setting('third', setter=custom_setter)
+            my_config.add_setting('third', setter=custom_setter)
 
-            assert my_configuration.third is None
+            assert my_config.third is None
             assert self.fake_ui_element == 0, self.fake_ui_element
 
-            my_configuration.read()
+            my_config.read()
 
-            assert my_configuration.third == 42, my_configuration.third
+            # confirm setting was read
+            assert my_config.third == 42, my_config.third
+            # confirm setter was called
             assert self.fake_ui_element == 42, self.fake_ui_element
 
-            assert 'fourth' not in my_configuration._settings
-
-            # test that calling setters can be disabled
-            self.fifth_element = "not set"
-            def set_fifth(value):
-                self.fifth_element = value
-
-            my_configuration.add_setting("fifth", default="default", setter=set_fifth)
-
-            assert self.fifth_element == "not set", self.fifth_element
-            assert my_configuration.fifth == "default", my_configuration.fifth
-
-            my_configuration.read(sync=False)
-
-            # only the configuration should have changed
-            assert self.fifth_element == "not set", self.fifth_element
-            assert my_configuration.fifth == "was set", my_configuration.fifth
-
-    def test_write(self):
+    def test_read__can_disable_calling_setters(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file = os.path.join(temp_dir, "test")
-            my_configuration = nostalgic.Configuration(temp_file)
+
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                test_config = "[General]\nfoo = \"was set\""
+                f.write(test_config)
+
+            my_config = nostalgic.Configuration(temp_file)
+
+            # test that calling setters can be disabled
+            self.ui_foo = "not set"
+            def set_ui_foo(value):
+                self.ui_foo = value
+
+            my_config.add_setting("foo", default="default", setter=set_ui_foo)
+
+            assert self.ui_foo == "not set", self.ui_foo
+            assert my_config.foo == "default", my_config.foo
+
+            my_config.read(sync=False)
+
+            # only the configuration should have changed
+            assert self.ui_foo == "not set", self.ui_foo
+            assert my_config.foo == "was set", my_config.foo
+
+    def test_has_write_method(self):
+        my_config = nostalgic.Configuration()
+
+        assert hasattr(my_config, 'write')
+        assert callable(my_config.write)
+
+    def test_write__saves_settings_to_disk(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+            my_config = nostalgic.Configuration(temp_file)
 
             # make sure the test directory/file doesn't already exist
-            assert not os.path.isdir(my_configuration.config_file)
-            assert not os.path.exists(my_configuration.config_file)
+            assert not os.path.isdir(my_config.config_file)
+            assert not os.path.exists(my_config.config_file)
 
-            assert hasattr(my_configuration, 'write')
-            assert callable(my_configuration.write)
+            my_config.add_setting("first", default=1)
+            my_config.add_setting("second", default="two")
 
-            my_configuration.add_setting("first", default=1)
-            my_configuration.add_setting("second", default="two")
+            my_config.write()
 
-            my_configuration.write()
-            assert os.path.exists(my_configuration.config_file)
+            # check that a file was created
+            assert os.path.exists(my_config.config_file)
 
-            with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+            # check file contents
+            with open(my_config.config_file, 'r', encoding='utf-8') as f:
                 text = f.read()
 
             # configparser writes putting two new lines at the end of the
@@ -372,42 +412,45 @@ class TestConfiguration:
             # (e.g. config_file) to disk
             assert text == "[General]\nfirst = 1\nsecond = \"two\"\n\n", text
 
+    def test_write__calls_getters_by_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+            my_config = nostalgic.Configuration(temp_file)
+
             def custom_getter():
-                return 42
+                return "baz"
 
-            my_configuration.add_setting("third", default=0, getter=custom_getter)
-            assert my_configuration.third == 0, my_configuration.third
+            my_config.add_setting("foo", default="bar", getter=custom_getter)
+            assert my_config.foo ==  "bar", my_config.third
 
-            my_configuration.write()
+            my_config.write()
 
-            with open(my_configuration.config_file, 'r', encoding='utf-8') as f:
+            with open(my_config.config_file, 'r', encoding='utf-8') as f:
                 text = f.read()
 
-            assert text == "[General]\nfirst = 1\nsecond = \"two\"\nthird = 42\n\n", text
-            assert my_configuration.third == 42, my_configuration.third
+            assert text == "[General]\nfoo = \"baz\"\n\n", text
+            assert my_config.foo == "baz", my_config.foo
 
-            # test that calling getters can be disabled
+    def test_write__can_disable_calling_getters(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, "test")
+            my_config = nostalgic.Configuration(temp_file)
+
             def getter_that_gets_disabled():
                 return "getter called when it shouldn't have been"
 
-            my_configuration.add_setting(
+            my_config.add_setting(
                 "test_sync_disable",
                 default="default",
                 getter=getter_that_gets_disabled)
 
-            assert my_configuration.test_sync_disable == "default", my_configuration.test_sync_disable
+            assert my_config.test_sync_disable == "default", my_config.test_sync_disable
 
-            my_configuration.write(sync=False)
+            my_config.write(sync=False)
 
-            assert my_configuration.test_sync_disable == "default", my_configuration.test_sync_disable
+            assert my_config.test_sync_disable == "default", my_config.test_sync_disable
 
-            # Clean up
-            # NOTE: Clean up won't happen on failure
-            post_test_clean_up()
-            os.remove(my_configuration.config_file)
-            os.rmdir(temp_dir)
-
-        # test that if the file doesn't already exist, it will be created
+    def test_write__config_file_is_created_if_none_exists(self):
         non_temp_configuration = nostalgic.Configuration("test_config_file_right_here_please_delete")
 
         # if filename has no directory, then directory creation code
@@ -441,175 +484,277 @@ class TestConfiguration:
         if os.path.exists(non_temp_configuration.config_file):
             warnings.warn(f"[WARNING]: Failed to remove: '{non_temp_configuration.config_file}'")
 
-    def test_get(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_file = os.path.join(temp_dir, "test")
-            my_configuration = nostalgic.Configuration(temp_file)
+    def test_has_get_method(self):
+        my_config = nostalgic.Configuration()
 
-            # test that get method exists
-            assert hasattr(my_configuration, 'get')
-            assert callable(my_configuration.get)
+        assert hasattr(my_config, 'get')
+        assert callable(my_config.get)
 
-            # test that get takes a list of settings and calls their
-            # getter
-            self.element_1 = 42
+    def test_get__takes_list_of_settings_and_calls_their_getters(self):
+        my_config = nostalgic.Configuration()
 
-            def get_element_1():
-                return self.element_1
+        self.ui_element_1 = "got 1"
 
-            my_configuration.add_setting("element_1", default=0, getter=get_element_1)
+        def get_element_1():
+            return self.ui_element_1
 
-            assert self.element_1 == 42, self.element_1
-            assert my_configuration.element_1 == 0, my_configuration.element_1
+        my_config.add_setting("element_1", default="not got 1", getter=get_element_1)
 
-            my_configuration.get(["element_1"])
+        assert self.ui_element_1 == "got 1", self.ui_element_1
+        assert my_config.element_1 == "not got 1", my_config.element_1
 
-            assert my_configuration.element_1 == 42, my_configuration.element_1
+        my_config.get(["element_1"])
 
-            # test that settings are called separately
-            self.element_1 = 24
-            self.element_2 = 50
+        assert my_config.element_1 == "got 1", my_config.element_1
 
-            def get_element_2():
-                return self.element_2
+    def test_get__calls_getters_separately(self):
+        my_config = nostalgic.Configuration()
 
-            assert self.element_1 == 24, self.element_1
-            assert self.element_2 == 50, self.element_2
+        self.ui_element_1 = "got 1"
+        self.ui_element_2 = "got 2"
 
-            my_configuration.add_setting("element_2", default=0, getter=get_element_2)
+        def get_element_1():
+            return self.ui_element_1
 
-            assert my_configuration.element_1 == 42, my_configuration.element_1
-            assert my_configuration.element_2 == 0, my_configuration.element_2
+        def get_element_2():
+            return self.ui_element_2
 
-            my_configuration.get(["element_2"])
+        assert self.ui_element_1 == "got 1", self.ui_element_1
+        assert self.ui_element_2 == "got 2", self.ui_element_2
 
-            assert my_configuration.element_1 == 42, my_configuration.element_1
-            assert my_configuration.element_2 == 50, my_configuration.element_2
+        my_config.add_setting("element_1", default="not got 1", getter=get_element_1)
+        my_config.add_setting("element_2", default="not got 2", getter=get_element_2)
 
-            # test that multiple elements can be passed in
-            self.element_2 = 10
+        assert my_config.element_1 == "not got 1", my_config.element_1
+        assert my_config.element_2 == "not got 2", my_config.element_2
 
-            assert my_configuration.element_1 == 42, my_configuration.element_1
-            assert my_configuration.element_2 == 50, my_configuration.element_2
+        my_config.get(["element_2"])
 
-            my_configuration.get(["element_1", "element_2"])
+        assert my_config.element_1 == "not got 1", my_config.element_1
+        assert my_config.element_2 == "got 2", my_config.element_2
 
-            assert my_configuration.element_1 == 24, my_configuration.element_1
-            assert my_configuration.element_2 == 10, my_configuration.element_2
+    def test_get__can_get_multiple_settings_at_once(self):
+        my_config = nostalgic.Configuration()
 
-            # test that success returns the value before the get
-            self.element_1 = 1
-            self.element_2 = 2
+        self.ui_element_1 = "got 1"
+        self.ui_element_2 = "got 2"
 
-            rv = my_configuration.get(["element_1", "element_2"])
+        def get_element_1():
+            return self.ui_element_1
 
-            assert rv == {"element_1": 24, "element_2": 10}, rv
-            assert my_configuration.element_1 == 1, my_configuration.element_1
-            assert my_configuration.element_2 == 2, my_configuration.element_2
+        def get_element_2():
+            return self.ui_element_2
 
-            # test that settings without getters don't cause problems
-            my_configuration.add_setting("no_getter", default=0)
+        my_config.add_setting("element_1", default="not got 1", getter=get_element_1)
+        my_config.add_setting("element_2", default="not got 2", getter=get_element_2)
 
-            assert my_configuration.no_getter == 0, my_configuration.no_getter
+        assert self.ui_element_1 == "got 1", self.ui_element_1
+        assert self.ui_element_2 == "got 2", self.ui_element_2
 
-            rv = my_configuration.get(["no_getter"])
+        assert my_config.element_1 == "not got 1", my_config.element_1
+        assert my_config.element_2 == "not got 2", my_config.element_2
 
-            assert rv == {}, rv
+        my_config.get(["element_1", "element_2"])
 
-            # test that passing in nothing calls all getters
-            self.element_1 = 1
-            self.element_2 = 2
+        assert my_config.element_1 == "got 1", my_config.element_1
+        assert my_config.element_2 == "got 2", my_config.element_2
 
-            my_configuration.get()
+    def test_get__return_value_is_the_setting_value_before_the_get(self):
+        my_config = nostalgic.Configuration()
 
-            assert my_configuration.element_1 == 1, my_configuration.element_1
-            assert my_configuration.element_2 == 2, my_configuration.element_2
+        self.ui_element_1 = "got 1"
+        self.ui_element_2 = "got 2"
 
-    def test_set(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_file = os.path.join(temp_dir, "test")
-            my_configuration = nostalgic.Configuration(temp_file)
+        def get_element_1():
+            return self.ui_element_1
 
-            # test that set method exists
-            assert hasattr(my_configuration, 'set')
-            assert callable(my_configuration.set)
+        def get_element_2():
+            return self.ui_element_2
 
-            # test that set takes a list of settings and calls their
-            # setter
-            self.element_1 = 1
+        my_config.add_setting("element_1", default="not got 1", getter=get_element_1)
+        my_config.add_setting("element_2", default="not got 2", getter=get_element_2)
 
-            def set_element_1(value):
-                self.element_1 = value
+        assert self.ui_element_1 == "got 1", self.ui_element_1
+        assert self.ui_element_2 == "got 2", self.ui_element_2
 
-            my_configuration.add_setting("element_1", default=0, setter=set_element_1)
+        assert my_config.element_1 == "not got 1", my_config.element_1
+        assert my_config.element_2 == "not got 2", my_config.element_2
 
-            assert self.element_1 == 1, self.element_1
-            assert my_configuration.element_1 == 0, my_configuration.element_1
+        rv = my_config.get(["element_1", "element_2"])
 
-            my_configuration.set(["element_1"])
+        assert rv == {"element_1": "not got 1", "element_2": "not got 2"}, rv
 
-            assert self.element_1 == 0, self.element_1
-            assert my_configuration.element_1 == 0, my_configuration.element_1
+    def test_get__settings_without_getters_dont_cause_problems(self):
+        my_config = nostalgic.Configuration()
 
-            # test that settings are called separately
-            self.element_1 = 1
-            self.element_2 = 2
+        self.ui_element_1 = "got 1"
+        self.ui_element_2 = "got 2"
 
-            def set_element_2(value):
-                self.element_2 = value
+        def get_element_1():
+            return self.ui_element_1
 
-            assert self.element_1 == 1, self.element_1
-            assert self.element_2 == 2, self.element_2
+        def get_element_2():
+            return self.ui_element_2
 
-            my_configuration.add_setting("element_2", default=0, setter=set_element_2)
+        my_config.add_setting("element_1", default="not got 1", getter=get_element_1)
+        my_config.add_setting("element_2", default="not got 2", getter=get_element_2)
+        my_config.add_setting("no_getter", default="should not have got")
 
-            # adding settings sets default
-            assert my_configuration.element_1 == 0, my_configuration.element_1
-            assert my_configuration.element_2 == 0, my_configuration.element_2
+        assert my_config.no_getter == "should not have got", my_config.no_getter
 
-            # adding a setting doesn't change the UI elements
-            assert self.element_1 == 1, self.element_1
-            assert self.element_2 == 2, self.element_2
+        rv = my_config.get(["no_getter"])
 
-            my_configuration.set(["element_2"])
+        assert rv == {}, rv
 
-            # calling set on element_2 doesn't affect element_1
-            assert self.element_1 == 1, self.element_1
-            assert self.element_2 == 0, self.element_2
+    def test_get__passing_in_nothing_calls_all_getters(self):
+        my_config = nostalgic.Configuration()
 
-            # test that multiple elements can be passed in
+        self.ui_element_1 = "got 1"
+        self.ui_element_2 = "got 2"
 
-            # reset UI elements
-            self.element_1 = 1
-            self.element_2 = 2
+        def get_element_1():
+            return self.ui_element_1
 
-            # confirm that the configuration is still in its default state
-            assert my_configuration.element_1 == 0, my_configuration.element_1
-            assert my_configuration.element_2 == 0, my_configuration.element_2
+        def get_element_2():
+            return self.ui_element_2
 
-            my_configuration.set(["element_1", "element_2"])
+        my_config.add_setting("element_1", default="not got 1", getter=get_element_1)
+        my_config.add_setting("element_2", default="not got 2", getter=get_element_2)
+        my_config.add_setting("no_getter", default="should not have got")
 
-            # confirm that the elements were set
-            assert self.element_1 == 0, self.element_1
-            assert self.element_2 == 0, self.element_2
-            assert my_configuration.element_1 == 0, my_configuration.element_1
-            assert my_configuration.element_2 == 0, my_configuration.element_2
+        my_config.get()
 
-            # test that settings without setters don't cause problems
-            my_configuration.add_setting("no_setter", default=0)
+        assert my_config.element_1 == "got 1", my_config.element_1
+        assert my_config.element_2 == "got 2", my_config.element_2
 
-            assert my_configuration.no_setter == 0
+    def test_has_set(self):
+        my_config = nostalgic.Configuration()
 
-            assert my_configuration.set(["no_setter"]) == None
+        assert hasattr(my_config, 'set')
+        assert callable(my_config.set)
 
-            # test that passing in nothing calls all setters
-            self.element_1 = 1
-            self.element_2 = 2
+    def test_set__takes_list_of_settings_and_calls_their_setters(self):
+        my_config = nostalgic.Configuration()
 
-            my_configuration.set()
+        self.element_1 = "not set 1"
 
-            assert self.element_1 == 0, self.element_1
-            assert self.element_2 == 0, self.element_2
+        def set_element_1(value):
+            self.element_1 = value
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert my_config.element_1 == "default 1", my_config.element_1
+
+        my_config.set(["element_1"])
+
+        assert self.element_1 == "default 1", self.element_1
+        assert my_config.element_1 == "default 1", my_config.element_1
+
+    def test_set__calls_setters_separately(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        # adding settings sets default value
+        assert my_config.element_1 == "default 1", my_config.element_1
+        assert my_config.element_2 == "default 2", my_config.element_2
+
+        # adding a setting doesn't change the UI elements
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.set(["element_2"])
+
+        # calling set on element_2 doesn't affect element_1
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "default 2", self.element_2
+
+    def test_set__can_set_multiple_components_at_once(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        # confirm that the configuration is still in its default state
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        my_config.set(["element_1", "element_2"])
+
+        # confirm that the elements were set
+        assert self.element_1 == "default 1", self.element_1
+        assert self.element_2 == "default 2", self.element_2
+        assert my_config.element_1 == "default 1", my_config.element_1
+        assert my_config.element_2 == "default 2", my_config.element_2
+
+    def test_set__settings_without_setters_dont_cause_problems(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+        my_config.add_setting("no_setter", default="should not have been set")
+
+        assert my_config.no_setter == "should not have been set"
+
+        assert my_config.set(["no_setter"]) == None
+
+    def test_set__passing_in_nothing_calls_all_setters(self):
+        my_config = nostalgic.Configuration()
+
+        self.element_1 = "not set 1"
+        self.element_2 = "not set 2"
+
+        def set_element_1(value):
+            self.element_1 = value
+
+        def set_element_2(value):
+            self.element_2 = value
+
+        assert self.element_1 == "not set 1", self.element_1
+        assert self.element_2 == "not set 2", self.element_2
+
+        my_config.add_setting("element_1", default="default 1", setter=set_element_1)
+        my_config.add_setting("element_2", default="default 2", setter=set_element_2)
+
+        my_config.set()
+
+        assert self.element_1 == "default 1", self.element_1
+        assert self.element_2 == "default 2", self.element_2
 
 
 if __name__ == '__main__':
