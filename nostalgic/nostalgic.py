@@ -130,6 +130,12 @@ class Configuration(metaclass=SingletonMetaclass):
         # Default Settings
         self.add_setting('config_file', filename)
 
+    def __setattr__(self, key, value):
+        if key in self.__dict__['_settings']:
+            self.__dict__['_settings'][key].value = value
+        else:
+            raise AttributeError(f"'{type(self).__name__}' object has no setting '{key}'")
+
     def __getitem__(self, key):
         return self.__dict__['_settings'][key]
 

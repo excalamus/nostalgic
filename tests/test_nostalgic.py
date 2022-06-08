@@ -211,9 +211,34 @@ class TestConfiguration:
 
         my_config.foo = 42
 
-        # check that the setting hasn't simply been replaced by an int
+        # test that the setting object isn't replaced by the assigned value
+        assert isinstance(my_config.__dict__['_settings']['foo'], nostalgic.Setting)
         assert isinstance(my_config["foo"], nostalgic.Setting)
+
+        # test that the value was actually set in the Setting object
+        assert my_config.__dict__['_settings']['foo'].value == 42, my_config.__dict__['_settings']['foo'].value
         assert my_config.foo == 42, my_config.foo
+
+    def test_only_declared_settings_can_be_assigned_a_value(self):
+        my_config = nostalgic.Configuration()
+
+        # NOTE: A try-except-else won't work here.  "The optional else
+        # clause is executed if the control flow leaves the try suite,
+        # NO EXCEPTION WAS RAISED, and no return, continue, or break
+        # statement was executed."  A KeyError comes from the lookup
+        # in self.__dict__['_settings'].  Since a KeyError exception
+        # is raised, the else is never executed and it's the KeyError
+        # that bubbles up.
+        try:
+            try:
+                my_config.banana = "Rama"
+            except AttributeError:
+                pass
+        except KeyError:
+            raise AssertionError(
+                "No setting defined causing a KeyError. "
+                "However, since user made the assignment using an attribute, "
+                "an AttributeError should be thrown instead of KeyError.")
 
     def test_add_setting__adds_a_setting_object(self):
         my_config = nostalgic.Configuration()
