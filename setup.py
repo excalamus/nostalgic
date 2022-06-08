@@ -10,7 +10,7 @@ import os
 from setuptools import setup, find_packages
 
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 with open("README.md", 'r', encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
@@ -44,7 +44,7 @@ setup(
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
-    description="Application settings",  # Optional
+    description="A drop-in configuration module to save and restore end-user and application settings",  # Optional
 
     # This is an optional longer description of your project that represents
     # the body of text which users will see when they visit PyPI.
