@@ -142,9 +142,6 @@ class Configuration(metaclass=SingletonMetaclass):
     def __getattr__(self, name):
         return self.__dict__['_settings'][name].value
 
-    def __getattribute__(self, name):
-        return object.__getattribute__(self, name)
-
     # TODO implement "(python) Emulating container types" methods
 
     def add_setting(self, key, default=None, setter=None, getter=None):
