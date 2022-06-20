@@ -1,3 +1,5 @@
+Development has moved to: https://codeberg.org/excalamus/nostalgic
+
 > ***Savor what you feel and what you see / Things that may not seem important now / But may be tomorrow***
 >
 > *–Chuck Schuldiner*
